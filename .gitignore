@@ -1,0 +1,15 @@
+.DS_Store
+
+# Xcode user-specific data
+xcuserdata/
+*.xcuserstate
+
+# Xcode build outputs
+DerivedData/
+build/
+
+# SwiftPM local build artifacts
+.build/
+
+# Local OMX state
+.omx/

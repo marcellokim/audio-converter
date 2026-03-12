@@ -1,0 +1,74 @@
+name: AudioConverter
+options:
+  bundleIdPrefix: com.ydmac
+  deploymentTarget:
+    macOS: '14.0'
+configs:
+  Debug: debug
+  Release: release
+settings:
+  base:
+    PRODUCT_BUNDLE_IDENTIFIER: com.ydmac.AudioConverter
+    SWIFT_VERSION: '5.10'
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: YES
+    INFOPLIST_KEY_CFBundleDisplayName: AudioConverter
+    INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.music
+    INFOPLIST_KEY_NSHumanReadableCopyright: Copyright © 2026 ydmac
+packages: {}
+targets:
+  AudioConverter:
+    type: application
+    platform: macOS
+    sources:
+      - path: AudioConverter
+    configFiles:
+      Debug: AudioConverter/Config/BuildSettings.xcconfig
+      Release: AudioConverter/Config/BuildSettings.xcconfig
+    settings:
+      base:
+        PRODUCT_NAME: AudioConverter
+        PRODUCT_BUNDLE_IDENTIFIER: com.ydmac.AudioConverter
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+    postBuildScripts:
+      - name: Embed vendored ffmpeg
+        path: scripts/embed-ffmpeg.sh
+        inputFiles:
+          - $(PROJECT_DIR)/AudioConverter/Resources/ffmpeg/ffmpeg
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ffmpeg/.embed-ffmpeg.stamp
+  AudioConverterTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: AudioConverterTests
+    dependencies:
+      - target: AudioConverter
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ydmac.AudioConverterTests
+        GENERATE_INFOPLIST_FILE: YES
+  AudioConverterUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: AudioConverterUITests
+    dependencies:
+      - target: AudioConverter
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ydmac.AudioConverterUITests
+        GENERATE_INFOPLIST_FILE: YES
+        ENABLE_HARDENED_RUNTIME: NO
+schemes:
+  AudioConverter:
+    build:
+      targets:
+        AudioConverter: all
+        AudioConverterTests: [test]
+        AudioConverterUITests: [test]
+    test:
+      targets:
+        - name: AudioConverterTests
+        - name: AudioConverterUITests

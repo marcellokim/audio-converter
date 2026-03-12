@@ -1,0 +1,796 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		064AE0D94A3669B6419BB043 /* AudioConverterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A7FEA7A43694A9CC7A303AE /* AudioConverterTests.swift */; };
+		0C36937A7B3BAAFAE0F89F81 /* FormatInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 975FAED0FE7F7300E4663B68 /* FormatInputView.swift */; };
+		102CF531B21F79A2386AA7C1 /* FormatRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10AF9EC802A38B185860D58 /* FormatRegistryTests.swift */; };
+		17366DD0B78F027B7EE4890A /* FFmpegRunning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B429CEAE21270E9073C742 /* FFmpegRunning.swift */; };
+		18273C235BFF17C6B0CF9167 /* FileSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F9DA6D6B93BBFE714BCA59 /* FileSelectionView.swift */; };
+		1C2AEA6F77C46FEE5C3414FF /* StatusBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8DF166CA83B086AB711FE8B /* StatusBannerView.swift */; };
+		1D6616972769FC002C6B884E /* BatchStatusPresenting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19180ED179AA6CACDF86B7D /* BatchStatusPresenting.swift */; };
+		2AB73BA4B150F5ADB4641152 /* SelectedAudioFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F893E3336C1FD3D8AE0B0C /* SelectedAudioFile.swift */; };
+		31651C88E3F78D62501EA5BE /* ValidationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2A49B84199EC13157B7986A /* ValidationState.swift */; };
+		36E6FA8F20FEAE5FFE64CF77 /* OpenPanelPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A060D93F5A920AFE217FEF7D /* OpenPanelPresenter.swift */; };
+		41DFFF7A434A79C957A80BC9 /* OpenPanelAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F5F794B529DDA460C0D420 /* OpenPanelAdapter.swift */; };
+		487B1CD8F4EC618568B1193D /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406B902A6EEA4D7AE8C80E98 /* AppState.swift */; };
+		495C606657926DD9BDBFBEB1 /* SpyFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 619D0443F323935075CBE2C8 /* SpyFileManager.swift */; };
+		51CB4B56C1634CF017FEB61E /* SkipReason.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC90D26CC05A88A26CBB273 /* SkipReason.swift */; };
+		559527CC5883C9CC17C6D163 /* FileManagingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FCAD58BCC2FB99D79E89C27 /* FileManagingTests.swift */; };
+		5F69B60F65978E3785E0A823 /* ConversionEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86BA7F50ED21E703429C2DE9 /* ConversionEngineTests.swift */; };
+		6271E99136D65D2D264A489B /* BatchStatusSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B5DE81B12F2BAB944228931 /* BatchStatusSnapshot.swift */; };
+		6589D637DE8939EDDDAF89E4 /* OutputPathResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5D865D0A05D42A0F1C4D04 /* OutputPathResolverTests.swift */; };
+		67DDD045DFAAC390B43105B8 /* FFmpegStartupSelfCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDA251C2DB14505A0AE954B8 /* FFmpegStartupSelfCheck.swift */; };
+		6873DB86699AC4E7236079B0 /* AudioConverterUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDF519152A56EF9EAA246ABC /* AudioConverterUITests.swift */; };
+		6A70ABBED8BED6B3FEA07F34 /* StubOpenPanelAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC094A902FD8658591378BC2 /* StubOpenPanelAdapter.swift */; };
+		6AA9ECEC9B30DDCF31A1C87C /* ConversionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAADE98D734F1016FEFE5831 /* ConversionEngine.swift */; };
+		71DD07708E6940FA564563B3 /* StubCapabilityChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202D1178EBCD29EB012AD48F /* StubCapabilityChecker.swift */; };
+		792E0E57C460FABA50CD8ECD /* FFmpegBinaryResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D29F403A75FBB72DDF2F9A8 /* FFmpegBinaryResolver.swift */; };
+		7A71E1397A11DDE67B5DEC45 /* ConversionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC17DD8175070A1A28FC70A3 /* ConversionCoordinator.swift */; };
+		7AF17A2977A55E01A7A15BF0 /* AudioConverterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7BF1FE6422BB74A64F92656 /* AudioConverterApp.swift */; };
+		7E0785FADA3E1B33DC3E3659 /* ConversionItemState.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACAD48F3A8F82B3D03A9917E /* ConversionItemState.swift */; };
+		7F96FA4412499722D5B415E3 /* OutputPathResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4AC8CD941BB9B4526407CB0 /* OutputPathResolver.swift */; };
+		8E98AF52D93DB3AF9C578DE5 /* FFmpegStartupSelfCheckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3229ADB81CC92BFB389C5979 /* FFmpegStartupSelfCheckTests.swift */; };
+		96CB7D540E19C115760B514A /* BatchStatusListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C522BA732CC5BC6BA124E813 /* BatchStatusListView.swift */; };
+		9A81415F055C4DE56BD50FD1 /* MockFFmpegRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B562AD5D5B2E53CD1CFACB26 /* MockFFmpegRunner.swift */; };
+		9BA55C840E95E63FD5C9AD15 /* FFmpegRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E2F427B338A8BCDD3F9727A /* FFmpegRunner.swift */; };
+		A08E9DF887FEB77525729896 /* FileManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43011DFA389003A2004CE030 /* FileManaging.swift */; };
+		A81CEAE768AA7AB2D46FAE8B /* FailureReason.swift in Sources */ = {isa = PBXBuildFile; fileRef = A43749FE281079E6BCCD44FD /* FailureReason.swift */; };
+		B27143B441384FAEA1F62F77 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B282FF6060474D766F6C9E5C /* MainView.swift */; };
+		C1EED18824D5112657086E5E /* FormatRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7956DEF9226850A6C387CCED /* FormatRegistry.swift */; };
+		C5BD80256F6718C0532914A0 /* FFmpegCommandBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7EA20CC30BBF35A6D4FA204 /* FFmpegCommandBuilder.swift */; };
+		C70C16AC90E9653EC831C219 /* SupportedFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050A60C2EA4A4DD3EC4F8D83 /* SupportedFormat.swift */; };
+		C7EB9CFF44CD396BAC61E7CA /* ConversionJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02630EDBBC60555ED3659CAC /* ConversionJob.swift */; };
+		C8419BE71E6A1BCB4710B3D9 /* BatchStatusPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5963999B262AF66E82113ACB /* BatchStatusPresenterTests.swift */; };
+		CD7A3656F3D80FCEBBD394C3 /* FormatValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B52ED701BD5D74E20794938F /* FormatValidator.swift */; };
+		D1084BCDFAF1EA0BA3A2C246 /* CapabilityChecking.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7C97F175E7679C2DD0ABBC8 /* CapabilityChecking.swift */; };
+		D13F75A8E20FFAE2F2A22264 /* MockFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B7E838A29F302C4D790B2E /* MockFileManager.swift */; };
+		D7C187581FCD3ACDB44E860D /* FFmpegCommandBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5018A57B35AE681DFCF1AF6D /* FFmpegCommandBuilderTests.swift */; };
+		DA7956888C63C8218D426C5E /* FormatValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05B5C971BE5487BC47C796C8 /* FormatValidatorTests.swift */; };
+		E154554C3278E73A7C911606 /* StartupState.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE7147A8DB8882A646ECE52D /* StartupState.swift */; };
+		EC18C43AAE088E390E7D4E71 /* SpyFFmpegRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 643718D78DE82ED3B63523CA /* SpyFFmpegRunner.swift */; };
+		F78E0FBC616C4A16D6657011 /* DefaultFileManagerAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA8FB1B49A6305CFBCAE0758 /* DefaultFileManagerAdapter.swift */; };
+		F82DAE3A8A9DB1491330A718 /* OpenPanelPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B8250D0FFD3E4416B150AE5 /* OpenPanelPresenterTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		69B8D98A5C0F8197F1A525C3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3B3E601E34B62C01C63FFE44 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BA863EF6FCCF9DB06701D4AC;
+			remoteInfo = AudioConverter;
+		};
+		C05C1C8CFB754959453AE6F2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3B3E601E34B62C01C63FFE44 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BA863EF6FCCF9DB06701D4AC;
+			remoteInfo = AudioConverter;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		02630EDBBC60555ED3659CAC /* ConversionJob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionJob.swift; sourceTree = "<group>"; };
+		050A60C2EA4A4DD3EC4F8D83 /* SupportedFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportedFormat.swift; sourceTree = "<group>"; };
+		05B5C971BE5487BC47C796C8 /* FormatValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatValidatorTests.swift; sourceTree = "<group>"; };
+		0AC90D26CC05A88A26CBB273 /* SkipReason.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkipReason.swift; sourceTree = "<group>"; };
+		202D1178EBCD29EB012AD48F /* StubCapabilityChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubCapabilityChecker.swift; sourceTree = "<group>"; };
+		2D0C9B6CDC172FE6D0C4CD7F /* AudioConverter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AudioConverter.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3229ADB81CC92BFB389C5979 /* FFmpegStartupSelfCheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegStartupSelfCheckTests.swift; sourceTree = "<group>"; };
+		37B429CEAE21270E9073C742 /* FFmpegRunning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegRunning.swift; sourceTree = "<group>"; };
+		3A7FEA7A43694A9CC7A303AE /* AudioConverterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioConverterTests.swift; sourceTree = "<group>"; };
+		406B902A6EEA4D7AE8C80E98 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		43011DFA389003A2004CE030 /* FileManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileManaging.swift; sourceTree = "<group>"; };
+		4F5D865D0A05D42A0F1C4D04 /* OutputPathResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputPathResolverTests.swift; sourceTree = "<group>"; };
+		5018A57B35AE681DFCF1AF6D /* FFmpegCommandBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegCommandBuilderTests.swift; sourceTree = "<group>"; };
+		54F893E3336C1FD3D8AE0B0C /* SelectedAudioFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedAudioFile.swift; sourceTree = "<group>"; };
+		5963999B262AF66E82113ACB /* BatchStatusPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchStatusPresenterTests.swift; sourceTree = "<group>"; };
+		59F9DA6D6B93BBFE714BCA59 /* FileSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSelectionView.swift; sourceTree = "<group>"; };
+		5E2F427B338A8BCDD3F9727A /* FFmpegRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegRunner.swift; sourceTree = "<group>"; };
+		619D0443F323935075CBE2C8 /* SpyFileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpyFileManager.swift; sourceTree = "<group>"; };
+		643718D78DE82ED3B63523CA /* SpyFFmpegRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpyFFmpegRunner.swift; sourceTree = "<group>"; };
+		6BA0B0BCC28075CBBC30CEF0 /* AudioConverterUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AudioConverterUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6FCAD58BCC2FB99D79E89C27 /* FileManagingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileManagingTests.swift; sourceTree = "<group>"; };
+		7956DEF9226850A6C387CCED /* FormatRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatRegistry.swift; sourceTree = "<group>"; };
+		7B5DE81B12F2BAB944228931 /* BatchStatusSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchStatusSnapshot.swift; sourceTree = "<group>"; };
+		86BA7F50ED21E703429C2DE9 /* ConversionEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionEngineTests.swift; sourceTree = "<group>"; };
+		975FAED0FE7F7300E4663B68 /* FormatInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatInputView.swift; sourceTree = "<group>"; };
+		9B8250D0FFD3E4416B150AE5 /* OpenPanelPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenPanelPresenterTests.swift; sourceTree = "<group>"; };
+		9D29F403A75FBB72DDF2F9A8 /* FFmpegBinaryResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegBinaryResolver.swift; sourceTree = "<group>"; };
+		A060D93F5A920AFE217FEF7D /* OpenPanelPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenPanelPresenter.swift; sourceTree = "<group>"; };
+		A2A49B84199EC13157B7986A /* ValidationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValidationState.swift; sourceTree = "<group>"; };
+		A43749FE281079E6BCCD44FD /* FailureReason.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FailureReason.swift; sourceTree = "<group>"; };
+		AC094A902FD8658591378BC2 /* StubOpenPanelAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubOpenPanelAdapter.swift; sourceTree = "<group>"; };
+		ACAD48F3A8F82B3D03A9917E /* ConversionItemState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionItemState.swift; sourceTree = "<group>"; };
+		B10AF9EC802A38B185860D58 /* FormatRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatRegistryTests.swift; sourceTree = "<group>"; };
+		B282FF6060474D766F6C9E5C /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
+		B52ED701BD5D74E20794938F /* FormatValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatValidator.swift; sourceTree = "<group>"; };
+		B562AD5D5B2E53CD1CFACB26 /* MockFFmpegRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockFFmpegRunner.swift; sourceTree = "<group>"; };
+		B7BF1FE6422BB74A64F92656 /* AudioConverterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioConverterApp.swift; sourceTree = "<group>"; };
+		B7C97F175E7679C2DD0ABBC8 /* CapabilityChecking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapabilityChecking.swift; sourceTree = "<group>"; };
+		BE7147A8DB8882A646ECE52D /* StartupState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupState.swift; sourceTree = "<group>"; };
+		C522BA732CC5BC6BA124E813 /* BatchStatusListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchStatusListView.swift; sourceTree = "<group>"; };
+		CCCB564853819212825469F0 /* BuildSettings.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BuildSettings.xcconfig; sourceTree = "<group>"; };
+		D19180ED179AA6CACDF86B7D /* BatchStatusPresenting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchStatusPresenting.swift; sourceTree = "<group>"; };
+		D8DF166CA83B086AB711FE8B /* StatusBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBannerView.swift; sourceTree = "<group>"; };
+		DA8FB1B49A6305CFBCAE0758 /* DefaultFileManagerAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultFileManagerAdapter.swift; sourceTree = "<group>"; };
+		DDA251C2DB14505A0AE954B8 /* FFmpegStartupSelfCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegStartupSelfCheck.swift; sourceTree = "<group>"; };
+		DDF519152A56EF9EAA246ABC /* AudioConverterUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioConverterUITests.swift; sourceTree = "<group>"; };
+		E4AC8CD941BB9B4526407CB0 /* OutputPathResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputPathResolver.swift; sourceTree = "<group>"; };
+		E7EA20CC30BBF35A6D4FA204 /* FFmpegCommandBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegCommandBuilder.swift; sourceTree = "<group>"; };
+		EAADE98D734F1016FEFE5831 /* ConversionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionEngine.swift; sourceTree = "<group>"; };
+		EB44C3EAD53800AA2A8F9B36 /* AudioConverterTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AudioConverterTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0B7E838A29F302C4D790B2E /* MockFileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockFileManager.swift; sourceTree = "<group>"; };
+		F6F5F794B529DDA460C0D420 /* OpenPanelAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenPanelAdapter.swift; sourceTree = "<group>"; };
+		F9844E8203084104B9AB0197 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		FC17DD8175070A1A28FC70A3 /* ConversionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionCoordinator.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		3AB340AAF0AB56FD2B28A595 /* AudioConverterUITests */ = {
+			isa = PBXGroup;
+			children = (
+				DDF519152A56EF9EAA246ABC /* AudioConverterUITests.swift */,
+			);
+			path = AudioConverterUITests;
+			sourceTree = "<group>";
+		};
+		46578389DE40D4FB9FE577EA /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				CCCB564853819212825469F0 /* BuildSettings.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		4A4D6275A5A0AB1253B77CF4 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				B7C97F175E7679C2DD0ABBC8 /* CapabilityChecking.swift */,
+				FC17DD8175070A1A28FC70A3 /* ConversionCoordinator.swift */,
+				EAADE98D734F1016FEFE5831 /* ConversionEngine.swift */,
+				DA8FB1B49A6305CFBCAE0758 /* DefaultFileManagerAdapter.swift */,
+				9D29F403A75FBB72DDF2F9A8 /* FFmpegBinaryResolver.swift */,
+				E7EA20CC30BBF35A6D4FA204 /* FFmpegCommandBuilder.swift */,
+				5E2F427B338A8BCDD3F9727A /* FFmpegRunner.swift */,
+				37B429CEAE21270E9073C742 /* FFmpegRunning.swift */,
+				DDA251C2DB14505A0AE954B8 /* FFmpegStartupSelfCheck.swift */,
+				43011DFA389003A2004CE030 /* FileManaging.swift */,
+				7956DEF9226850A6C387CCED /* FormatRegistry.swift */,
+				B52ED701BD5D74E20794938F /* FormatValidator.swift */,
+				E4AC8CD941BB9B4526407CB0 /* OutputPathResolver.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		591A4A0B07A3DCD9E697685C /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				B282FF6060474D766F6C9E5C /* MainView.swift */,
+				C005053305256026B8638878 /* Components */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		67282F1A8027595DC0B3FEDD /* AudioConverterTests */ = {
+			isa = PBXGroup;
+			children = (
+				3A7FEA7A43694A9CC7A303AE /* AudioConverterTests.swift */,
+				5963999B262AF66E82113ACB /* BatchStatusPresenterTests.swift */,
+				86BA7F50ED21E703429C2DE9 /* ConversionEngineTests.swift */,
+				5018A57B35AE681DFCF1AF6D /* FFmpegCommandBuilderTests.swift */,
+				3229ADB81CC92BFB389C5979 /* FFmpegStartupSelfCheckTests.swift */,
+				6FCAD58BCC2FB99D79E89C27 /* FileManagingTests.swift */,
+				B10AF9EC802A38B185860D58 /* FormatRegistryTests.swift */,
+				05B5C971BE5487BC47C796C8 /* FormatValidatorTests.swift */,
+				9B8250D0FFD3E4416B150AE5 /* OpenPanelPresenterTests.swift */,
+				4F5D865D0A05D42A0F1C4D04 /* OutputPathResolverTests.swift */,
+				AF9822A3A42D593A1F521ED8 /* TestDoubles */,
+			);
+			path = AudioConverterTests;
+			sourceTree = "<group>";
+		};
+		6C8CFE9A8CAD2AA3DB914104 /* ffmpeg */ = {
+			isa = PBXGroup;
+			children = (
+				F9844E8203084104B9AB0197 /* .gitkeep */,
+			);
+			path = ffmpeg;
+			sourceTree = "<group>";
+		};
+		AB54763FF5D1665F4F5F6F42 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2D0C9B6CDC172FE6D0C4CD7F /* AudioConverter.app */,
+				EB44C3EAD53800AA2A8F9B36 /* AudioConverterTests.xctest */,
+				6BA0B0BCC28075CBBC30CEF0 /* AudioConverterUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AF9822A3A42D593A1F521ED8 /* TestDoubles */ = {
+			isa = PBXGroup;
+			children = (
+				B562AD5D5B2E53CD1CFACB26 /* MockFFmpegRunner.swift */,
+				F0B7E838A29F302C4D790B2E /* MockFileManager.swift */,
+				643718D78DE82ED3B63523CA /* SpyFFmpegRunner.swift */,
+				619D0443F323935075CBE2C8 /* SpyFileManager.swift */,
+				202D1178EBCD29EB012AD48F /* StubCapabilityChecker.swift */,
+				AC094A902FD8658591378BC2 /* StubOpenPanelAdapter.swift */,
+			);
+			path = TestDoubles;
+			sourceTree = "<group>";
+		};
+		BD626DDFF6B0CDE0097C4C76 /* AudioConverter */ = {
+			isa = PBXGroup;
+			children = (
+				BE24179D7EF475F866A41C65 /* App */,
+				46578389DE40D4FB9FE577EA /* Config */,
+				4A4D6275A5A0AB1253B77CF4 /* Core */,
+				D6F3C62CAF9324899E03977F /* Models */,
+				D86C205877434138BB0DA612 /* Resources */,
+				591A4A0B07A3DCD9E697685C /* UI */,
+				D7AEC27C8F468351D4560E17 /* UIAdapters */,
+			);
+			path = AudioConverter;
+			sourceTree = "<group>";
+		};
+		BE24179D7EF475F866A41C65 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				406B902A6EEA4D7AE8C80E98 /* AppState.swift */,
+				B7BF1FE6422BB74A64F92656 /* AudioConverterApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		C005053305256026B8638878 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				C522BA732CC5BC6BA124E813 /* BatchStatusListView.swift */,
+				59F9DA6D6B93BBFE714BCA59 /* FileSelectionView.swift */,
+				975FAED0FE7F7300E4663B68 /* FormatInputView.swift */,
+				D8DF166CA83B086AB711FE8B /* StatusBannerView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		D6F3C62CAF9324899E03977F /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				7B5DE81B12F2BAB944228931 /* BatchStatusSnapshot.swift */,
+				ACAD48F3A8F82B3D03A9917E /* ConversionItemState.swift */,
+				02630EDBBC60555ED3659CAC /* ConversionJob.swift */,
+				A43749FE281079E6BCCD44FD /* FailureReason.swift */,
+				54F893E3336C1FD3D8AE0B0C /* SelectedAudioFile.swift */,
+				0AC90D26CC05A88A26CBB273 /* SkipReason.swift */,
+				BE7147A8DB8882A646ECE52D /* StartupState.swift */,
+				050A60C2EA4A4DD3EC4F8D83 /* SupportedFormat.swift */,
+				A2A49B84199EC13157B7986A /* ValidationState.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		D7AEC27C8F468351D4560E17 /* UIAdapters */ = {
+			isa = PBXGroup;
+			children = (
+				D19180ED179AA6CACDF86B7D /* BatchStatusPresenting.swift */,
+				F6F5F794B529DDA460C0D420 /* OpenPanelAdapter.swift */,
+				A060D93F5A920AFE217FEF7D /* OpenPanelPresenter.swift */,
+			);
+			path = UIAdapters;
+			sourceTree = "<group>";
+		};
+		D86C205877434138BB0DA612 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				6C8CFE9A8CAD2AA3DB914104 /* ffmpeg */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		F3C272280162A068D6EB41DB = {
+			isa = PBXGroup;
+			children = (
+				BD626DDFF6B0CDE0097C4C76 /* AudioConverter */,
+				67282F1A8027595DC0B3FEDD /* AudioConverterTests */,
+				3AB340AAF0AB56FD2B28A595 /* AudioConverterUITests */,
+				AB54763FF5D1665F4F5F6F42 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		51FAA4DE2449FE4AEA768793 /* AudioConverterTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4AEBB58FF515B64F9CDDED7A /* Build configuration list for PBXNativeTarget "AudioConverterTests" */;
+			buildPhases = (
+				FF1ED98E0632A9DF60E0299B /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F0A4DF61CC366171AD2B2A5D /* PBXTargetDependency */,
+			);
+			name = AudioConverterTests;
+			packageProductDependencies = (
+			);
+			productName = AudioConverterTests;
+			productReference = EB44C3EAD53800AA2A8F9B36 /* AudioConverterTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B74A223EC22322B4EC5E4A08 /* AudioConverterUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8A5A824FD72F26F5954938C8 /* Build configuration list for PBXNativeTarget "AudioConverterUITests" */;
+			buildPhases = (
+				D756AE465C0545967AA59421 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				015E4107BCF169B3B92D4A6E /* PBXTargetDependency */,
+			);
+			name = AudioConverterUITests;
+			packageProductDependencies = (
+			);
+			productName = AudioConverterUITests;
+			productReference = 6BA0B0BCC28075CBBC30CEF0 /* AudioConverterUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		BA863EF6FCCF9DB06701D4AC /* AudioConverter */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A19A7AC40A3F23D4F5A727FD /* Build configuration list for PBXNativeTarget "AudioConverter" */;
+			buildPhases = (
+				E64197B4C5CB1B09B57B81BE /* Sources */,
+				9C09727464CE149E32EF3560 /* Embed vendored ffmpeg */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AudioConverter;
+			packageProductDependencies = (
+			);
+			productName = AudioConverter;
+			productReference = 2D0C9B6CDC172FE6D0C4CD7F /* AudioConverter.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3B3E601E34B62C01C63FFE44 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					51FAA4DE2449FE4AEA768793 = {
+						ProvisioningStyle = Automatic;
+					};
+					B74A223EC22322B4EC5E4A08 = {
+						ProvisioningStyle = Automatic;
+						TestTargetID = BA863EF6FCCF9DB06701D4AC;
+					};
+					BA863EF6FCCF9DB06701D4AC = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 2C031E66D2F92AA28CDC7001 /* Build configuration list for PBXProject "AudioConverter" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = F3C272280162A068D6EB41DB;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = AB54763FF5D1665F4F5F6F42 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BA863EF6FCCF9DB06701D4AC /* AudioConverter */,
+				51FAA4DE2449FE4AEA768793 /* AudioConverterTests */,
+				B74A223EC22322B4EC5E4A08 /* AudioConverterUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		9C09727464CE149E32EF3560 /* Embed vendored ffmpeg */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(PROJECT_DIR)/AudioConverter/Resources/ffmpeg/ffmpeg",
+			);
+			name = "Embed vendored ffmpeg";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ffmpeg/.embed-ffmpeg.stamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/sh\nset -eu\n\nSOURCE_FFMPEG=\"${PROJECT_DIR}/AudioConverter/Resources/ffmpeg/ffmpeg\"\nDEST_DIR=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ffmpeg\"\nDEST_FFMPEG=\"${DEST_DIR}/ffmpeg\"\nSTAMP_FILE=\"${DEST_DIR}/.embed-ffmpeg.stamp\"\n\nmkdir -p \"${DEST_DIR}\"\n\nif [ ! -f \"${SOURCE_FFMPEG}\" ]; then\n  echo \"warning: vendored ffmpeg binary not found at ${SOURCE_FFMPEG}; skipping embed step\"\n  : > \"${STAMP_FILE}\"\n  exit 0\nfi\n\ncp \"${SOURCE_FFMPEG}\" \"${DEST_FFMPEG}\"\nchmod +x \"${DEST_FFMPEG}\"\n: > \"${STAMP_FILE}\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D756AE465C0545967AA59421 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6873DB86699AC4E7236079B0 /* AudioConverterUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E64197B4C5CB1B09B57B81BE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				487B1CD8F4EC618568B1193D /* AppState.swift in Sources */,
+				7AF17A2977A55E01A7A15BF0 /* AudioConverterApp.swift in Sources */,
+				96CB7D540E19C115760B514A /* BatchStatusListView.swift in Sources */,
+				1D6616972769FC002C6B884E /* BatchStatusPresenting.swift in Sources */,
+				6271E99136D65D2D264A489B /* BatchStatusSnapshot.swift in Sources */,
+				D1084BCDFAF1EA0BA3A2C246 /* CapabilityChecking.swift in Sources */,
+				7A71E1397A11DDE67B5DEC45 /* ConversionCoordinator.swift in Sources */,
+				6AA9ECEC9B30DDCF31A1C87C /* ConversionEngine.swift in Sources */,
+				7E0785FADA3E1B33DC3E3659 /* ConversionItemState.swift in Sources */,
+				C7EB9CFF44CD396BAC61E7CA /* ConversionJob.swift in Sources */,
+				F78E0FBC616C4A16D6657011 /* DefaultFileManagerAdapter.swift in Sources */,
+				792E0E57C460FABA50CD8ECD /* FFmpegBinaryResolver.swift in Sources */,
+				C5BD80256F6718C0532914A0 /* FFmpegCommandBuilder.swift in Sources */,
+				9BA55C840E95E63FD5C9AD15 /* FFmpegRunner.swift in Sources */,
+				17366DD0B78F027B7EE4890A /* FFmpegRunning.swift in Sources */,
+				67DDD045DFAAC390B43105B8 /* FFmpegStartupSelfCheck.swift in Sources */,
+				A81CEAE768AA7AB2D46FAE8B /* FailureReason.swift in Sources */,
+				A08E9DF887FEB77525729896 /* FileManaging.swift in Sources */,
+				18273C235BFF17C6B0CF9167 /* FileSelectionView.swift in Sources */,
+				0C36937A7B3BAAFAE0F89F81 /* FormatInputView.swift in Sources */,
+				C1EED18824D5112657086E5E /* FormatRegistry.swift in Sources */,
+				CD7A3656F3D80FCEBBD394C3 /* FormatValidator.swift in Sources */,
+				B27143B441384FAEA1F62F77 /* MainView.swift in Sources */,
+				41DFFF7A434A79C957A80BC9 /* OpenPanelAdapter.swift in Sources */,
+				36E6FA8F20FEAE5FFE64CF77 /* OpenPanelPresenter.swift in Sources */,
+				7F96FA4412499722D5B415E3 /* OutputPathResolver.swift in Sources */,
+				2AB73BA4B150F5ADB4641152 /* SelectedAudioFile.swift in Sources */,
+				51CB4B56C1634CF017FEB61E /* SkipReason.swift in Sources */,
+				E154554C3278E73A7C911606 /* StartupState.swift in Sources */,
+				1C2AEA6F77C46FEE5C3414FF /* StatusBannerView.swift in Sources */,
+				C70C16AC90E9653EC831C219 /* SupportedFormat.swift in Sources */,
+				31651C88E3F78D62501EA5BE /* ValidationState.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FF1ED98E0632A9DF60E0299B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				064AE0D94A3669B6419BB043 /* AudioConverterTests.swift in Sources */,
+				C8419BE71E6A1BCB4710B3D9 /* BatchStatusPresenterTests.swift in Sources */,
+				5F69B60F65978E3785E0A823 /* ConversionEngineTests.swift in Sources */,
+				D7C187581FCD3ACDB44E860D /* FFmpegCommandBuilderTests.swift in Sources */,
+				8E98AF52D93DB3AF9C578DE5 /* FFmpegStartupSelfCheckTests.swift in Sources */,
+				559527CC5883C9CC17C6D163 /* FileManagingTests.swift in Sources */,
+				102CF531B21F79A2386AA7C1 /* FormatRegistryTests.swift in Sources */,
+				DA7956888C63C8218D426C5E /* FormatValidatorTests.swift in Sources */,
+				9A81415F055C4DE56BD50FD1 /* MockFFmpegRunner.swift in Sources */,
+				D13F75A8E20FFAE2F2A22264 /* MockFileManager.swift in Sources */,
+				F82DAE3A8A9DB1491330A718 /* OpenPanelPresenterTests.swift in Sources */,
+				6589D637DE8939EDDDAF89E4 /* OutputPathResolverTests.swift in Sources */,
+				EC18C43AAE088E390E7D4E71 /* SpyFFmpegRunner.swift in Sources */,
+				495C606657926DD9BDBFBEB1 /* SpyFileManager.swift in Sources */,
+				71DD07708E6940FA564563B3 /* StubCapabilityChecker.swift in Sources */,
+				6A70ABBED8BED6B3FEA07F34 /* StubOpenPanelAdapter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		015E4107BCF169B3B92D4A6E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BA863EF6FCCF9DB06701D4AC /* AudioConverter */;
+			targetProxy = C05C1C8CFB754959453AE6F2 /* PBXContainerItemProxy */;
+		};
+		F0A4DF61CC366171AD2B2A5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BA863EF6FCCF9DB06701D4AC /* AudioConverter */;
+			targetProxy = 69B8D98A5C0F8197F1A525C3 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		268C281F403A9DE1D8DBD834 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = AudioConverter;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 ydmac";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ydmac.AudioConverter;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		42BCFCD0957071E3A8C5678B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = AudioConverter;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 ydmac";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ydmac.AudioConverter;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+		4A8E9743FEC5A48A7DDE50DC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ydmac.AudioConverterUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = AudioConverter;
+			};
+			name = Debug;
+		};
+		63D461C35B8DE281C0810FBC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ydmac.AudioConverterUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = AudioConverter;
+			};
+			name = Release;
+		};
+		B08A9626C8156EE8CFBEB4E6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ydmac.AudioConverterTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AudioConverter.app/Contents/MacOS/AudioConverter";
+			};
+			name = Release;
+		};
+		B11919D6FB1477779C192ED0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ydmac.AudioConverterTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AudioConverter.app/Contents/MacOS/AudioConverter";
+			};
+			name = Debug;
+		};
+		B791EF3127B72C0E759B0C15 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = CCCB564853819212825469F0 /* BuildSettings.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ydmac.AudioConverter;
+				PRODUCT_NAME = AudioConverter;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		E175F21D17EF6B10AA8EDCFC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = CCCB564853819212825469F0 /* BuildSettings.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ydmac.AudioConverter;
+				PRODUCT_NAME = AudioConverter;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2C031E66D2F92AA28CDC7001 /* Build configuration list for PBXProject "AudioConverter" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				268C281F403A9DE1D8DBD834 /* Debug */,
+				42BCFCD0957071E3A8C5678B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4AEBB58FF515B64F9CDDED7A /* Build configuration list for PBXNativeTarget "AudioConverterTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B11919D6FB1477779C192ED0 /* Debug */,
+				B08A9626C8156EE8CFBEB4E6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8A5A824FD72F26F5954938C8 /* Build configuration list for PBXNativeTarget "AudioConverterUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4A8E9743FEC5A48A7DDE50DC /* Debug */,
+				63D461C35B8DE281C0810FBC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A19A7AC40A3F23D4F5A727FD /* Build configuration list for PBXNativeTarget "AudioConverter" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E175F21D17EF6B10AA8EDCFC /* Debug */,
+				B791EF3127B72C0E759B0C15 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3B3E601E34B62C01C63FFE44 /* Project object */;
+}
