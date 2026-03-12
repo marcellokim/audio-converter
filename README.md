@@ -1,17 +1,18 @@
 # AudioConverter
 
-FFmpeg-based macOS batch audio converter scaffold.
+FFmpeg-based macOS batch audio converter for batch audio format conversion on macOS.
 
 ## Current status
-This repository now contains the first implementation cycle:
+This repository now contains:
 - XcodeGen project spec in `project.yml`
 - macOS SwiftUI app scaffold in `AudioConverter/`
-- initial unit/UI test targets
+- unit, UI, and real-FFmpeg integration test coverage in `AudioConverterTests/` and `AudioConverterUITests/`
+- a vendored macOS `arm64` FFmpeg binary in `AudioConverter/Resources/ffmpeg/ffmpeg`
 - FFmpeg embed build script in `scripts/embed-ffmpeg.sh`
-- format registry and startup self-check core files
-- distribution and FFmpeg provenance notes in `docs/`
+- format registry, startup self-check, and conversion core files
+- distribution, provenance, and licensing notes in `docs/`
 
-The app is still an early scaffold. File picking, conversion coordination, and release signing automation are not finished yet.
+The conversion core is now verified against the vendored FFmpeg binary, but the current UI is still a scaffold shell rather than a polished end-to-end product flow.
 
 ## Project structure
 - `project.yml`: XcodeGen project definition
@@ -54,19 +55,23 @@ Run tests:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -scheme AudioConverter -destination 'platform=macOS' test
 ```
 
-Current verification note: unit tests pass, but the current UI test target fails to load with a macOS code-signing Team ID mismatch in `AudioConverterUITests-Runner`.
+Current verification note (2026-03-12): a fresh build succeeds, the default scheme xcresult records both `AudioConverterTests` and `AudioConverterUITests` with passing results, and the integration test converts a generated WAV fixture to MP3 using the vendored FFmpeg binary.
 
 ## FFmpeg bundle expectation
-The build script expects a vendored binary at:
+The build script embeds the vendored binary from:
 
 ```text
 AudioConverter/Resources/ffmpeg/ffmpeg
 ```
 
-If the binary is missing, the build currently emits a warning and skips embedding.
+The current vendored artifact is FFmpeg `8.0.1` for macOS `arm64`. See `docs/ffmpeg-provenance.md` for the exact source URL and checksums.
+
+## Current release caveat
+- The vendored FFmpeg artifact is operationally present and verified for local conversion tests.
+- Its upstream build configuration includes `--enable-gpl`, so it does **not** satisfy the repo's earlier LGPL-only release policy. See `docs/ffmpeg-licensing.md` before distributing a release.
 
 ## Next implementation milestones
-- add `NSOpenPanel` adapter/presenter for file selection
-- connect startup self-check to app state
-- implement output path resolution and conversion engine
-- replace the development FFmpeg reference with a redistributable LGPL-compatible vendored artifact
+- wire the current UI shell to the file picker and conversion coordinator
+- connect startup self-check feedback more directly to launch-time UI state
+- finish release automation for nested executable signing and notarization
+- replace the current GPL-enabled FFmpeg artifact if an LGPL-only distribution policy remains required

@@ -43,6 +43,7 @@
 		A81CEAE768AA7AB2D46FAE8B /* FailureReason.swift in Sources */ = {isa = PBXBuildFile; fileRef = A43749FE281079E6BCCD44FD /* FailureReason.swift */; };
 		B27143B441384FAEA1F62F77 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B282FF6060474D766F6C9E5C /* MainView.swift */; };
 		C1EED18824D5112657086E5E /* FormatRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7956DEF9226850A6C387CCED /* FormatRegistry.swift */; };
+		C4E0D7F228F84A5184F40CA8 /* RealFFmpegIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7F18A285DF6A1DD56692F4 /* RealFFmpegIntegrationTests.swift */; };
 		C5BD80256F6718C0532914A0 /* FFmpegCommandBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7EA20CC30BBF35A6D4FA204 /* FFmpegCommandBuilder.swift */; };
 		C70C16AC90E9653EC831C219 /* SupportedFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050A60C2EA4A4DD3EC4F8D83 /* SupportedFormat.swift */; };
 		C7EB9CFF44CD396BAC61E7CA /* ConversionJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02630EDBBC60555ED3659CAC /* ConversionJob.swift */; };
@@ -80,6 +81,7 @@
 		050A60C2EA4A4DD3EC4F8D83 /* SupportedFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportedFormat.swift; sourceTree = "<group>"; };
 		05B5C971BE5487BC47C796C8 /* FormatValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatValidatorTests.swift; sourceTree = "<group>"; };
 		0AC90D26CC05A88A26CBB273 /* SkipReason.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkipReason.swift; sourceTree = "<group>"; };
+		0C7F18A285DF6A1DD56692F4 /* RealFFmpegIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealFFmpegIntegrationTests.swift; sourceTree = "<group>"; };
 		202D1178EBCD29EB012AD48F /* StubCapabilityChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubCapabilityChecker.swift; sourceTree = "<group>"; };
 		2D0C9B6CDC172FE6D0C4CD7F /* AudioConverter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AudioConverter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3229ADB81CC92BFB389C5979 /* FFmpegStartupSelfCheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegStartupSelfCheckTests.swift; sourceTree = "<group>"; };
@@ -191,6 +193,7 @@
 				05B5C971BE5487BC47C796C8 /* FormatValidatorTests.swift */,
 				9B8250D0FFD3E4416B150AE5 /* OpenPanelPresenterTests.swift */,
 				4F5D865D0A05D42A0F1C4D04 /* OutputPathResolverTests.swift */,
+				0C7F18A285DF6A1DD56692F4 /* RealFFmpegIntegrationTests.swift */,
 				AF9822A3A42D593A1F521ED8 /* TestDoubles */,
 			);
 			path = AudioConverterTests;
@@ -491,6 +494,7 @@
 				D13F75A8E20FFAE2F2A22264 /* MockFileManager.swift in Sources */,
 				F82DAE3A8A9DB1491330A718 /* OpenPanelPresenterTests.swift in Sources */,
 				6589D637DE8939EDDDAF89E4 /* OutputPathResolverTests.swift in Sources */,
+				C4E0D7F228F84A5184F40CA8 /* RealFFmpegIntegrationTests.swift in Sources */,
 				EC18C43AAE088E390E7D4E71 /* SpyFFmpegRunner.swift in Sources */,
 				495C606657926DD9BDBFBEB1 /* SpyFileManager.swift in Sources */,
 				71DD07708E6940FA564563B3 /* StubCapabilityChecker.swift in Sources */,

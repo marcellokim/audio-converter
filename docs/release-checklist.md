@@ -7,7 +7,7 @@
 - Signed and notarized app bundle required before distribution
 
 ## Pre-release artifact checks
-1. Replace `AudioConverter/Resources/ffmpeg/ffmpeg` placeholder with the approved vendored binary.
+1. Confirm `AudioConverter/Resources/ffmpeg/ffmpeg` matches the approved vendored artifact recorded in `docs/ffmpeg-provenance.md`.
 2. Verify the vendored binary matches the provenance record in `docs/ffmpeg-provenance.md`.
 3. Confirm the licensing package described in `docs/ffmpeg-licensing.md` is included with the release artifact.
 4. Regenerate the Xcode project from `project.yml` after any build-script change.
@@ -30,6 +30,6 @@
 - Confirm output files land beside their source files.
 
 ## Current known gaps
-- The repository still contains a placeholder `.gitkeep` instead of the final vendored ffmpeg binary.
-- Remaining implementation files from the approved plan may still be under active development in parallel team tasks.
+- The vendored FFmpeg binary is now present, but the current chosen artifact is GPL-enabled and therefore conflicts with the repo's earlier LGPL-only distribution policy.
+- The release bundle still needs explicit notice packaging and a policy decision: either replace the vendored binary with an LGPL-compatible build or ship under GPL-compliant distribution terms.
 - Release automation for nested executable signing and notarization remains documented but not fully scripted yet.

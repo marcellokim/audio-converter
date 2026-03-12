@@ -1,30 +1,36 @@
 # FFmpeg provenance
 
-## Current local development reference
-This scaffold records the local FFmpeg binary already validated during planning. It is a development reference only, not yet a finalized redistributable artifact.
+## Current vendored artifact
+The repository now vendors a concrete FFmpeg artifact at `AudioConverter/Resources/ffmpeg/ffmpeg`.
 
 | Field | Value |
 | --- | --- |
-| Version | 8.0 |
-| Source / provenance | Homebrew formula `ffmpeg` installed under `/opt/homebrew/Cellar/ffmpeg/8.0_1` |
-| Binary path used for validation | `/opt/homebrew/bin/ffmpeg` |
-| SHA256 | `fe026c818fa2f3b07263bc92c559b21518014c727720db2dfb3a24d372618116` |
-| License mode | Homebrew build reports `--enable-gpl`; not yet suitable for the planned LGPL-compatible vendored release artifact |
-| Target architecture | arm64 (planned v1 target) |
+| Version | `8.0.1` |
+| Platform / architecture | macOS `arm64` |
+| Vendored binary path | `AudioConverter/Resources/ffmpeg/ffmpeg` |
+| Vendored binary SHA256 | `3b586ff896c0339e8fd574c143aaccac23c80789341e22d4202f8013a133d3a4` |
+| Source / provenance | Martin Riedl FFmpeg build server |
+| Detail page | `https://ffmpeg.martin-riedl.de/info/detail/macos/arm64/1766430132_8.0.1` |
+| Download URL (zip) | `https://ffmpeg.martin-riedl.de/download/macos/arm64/1766430132_8.0.1/ffmpeg.zip` |
+| Download ZIP SHA256 | `c56f4e2b2ce26a61becf890d8da3415347a1d7d4418cb514915f21612358b790` |
+| Created timestamp | `22 Dec 2025 20:02 CET` |
+| Build-script source | `https://git.martin-riedl.de/ffmpeg/build-script` |
+| License mode | Upstream `versions.txt` reports `--enable-gpl`, so this artifact is GPL-enabled rather than LGPL-only |
 
-## Configure flags captured during planning
+## Configure flags recorded from upstream `versions.txt`
 ```text
---prefix=/opt/homebrew/Cellar/ffmpeg/8.0_1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox --enable-neon
+--prefix=/Volumes/ffmpeg_arm64/out --pkg-config-flags=--static --extra-version='https://www.martin-riedl.de' --enable-gray --enable-libxml2 --enable-gpl --enable-libfreetype --enable-fontconfig --enable-libharfbuzz --enable-libsnappy --enable-libsrt --enable-libvmaf --enable-libass --enable-libklvanc --enable-libzimg --enable-libzvbi --enable-libaom --enable-libdav1d --enable-libopenh264 --enable-libopenjpeg --enable-librav1e --enable-libsvtav1 --enable-libvpx --enable-libvvenc --enable-libwebp --enable-libx264 --enable-libx265 --enable-libmp3lame --enable-libopus --enable-libvorbis --enable-libtheora
 ```
 
-## Required audio capabilities validated for v1 planning
+## Required audio capabilities validated against the vendored binary
 - Encoders: `libmp3lame`, `aac`, `pcm_s16le`, `flac`, `pcm_s16be`, `libopus`, `libvorbis`
 - Muxers: `mp3`, `ipod`, `adts`, `wav`, `flac`, `aiff`, `opus`, `ogg`
 
-## Follow-up required before release
-- Replace the development reference with a vendored LGPL-compatible FFmpeg artifact.
-- Record the final artifact source URL, exact source tarball, rebuild recipe, and redistributable license notices.
+The repo's real-FFmpeg integration test and startup self-check both validate the current vendored binary against these capabilities.
 
+## Operational status vs. release status
+- **Resolved:** the repo no longer has a placeholder-only FFmpeg resource. The vendored binary is present and can be embedded into the app bundle.
+- **Still blocked for an LGPL-only policy:** the chosen artifact is GPL-enabled because its upstream build configuration includes `--enable-gpl`.
 
 ## Related release documents
 - `docs/ffmpeg-licensing.md` — release-time license and source-distribution obligations for the shipped FFmpeg binary.
