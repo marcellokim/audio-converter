@@ -8,11 +8,13 @@
 
 ## Pre-release artifact checks
 1. Confirm `AudioConverter/Resources/ffmpeg/ffmpeg` matches the approved vendored artifact recorded in `docs/ffmpeg-provenance.md`.
-2. Verify the vendored binary matches the provenance record in `docs/ffmpeg-provenance.md`.
-3. Confirm the licensing package described in `docs/ffmpeg-licensing.md` is included with the release artifact.
-4. Regenerate the Xcode project from `project.yml` after any build-script change.
-5. Build with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project AudioConverter.xcodeproj -scheme AudioConverter -destination 'platform=macOS' build`.
-6. Run tests with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project AudioConverter.xcodeproj -scheme AudioConverter -destination 'platform=macOS' test`.
+2. Recompute the vendored binary SHA256 and confirm it matches `docs/ffmpeg-provenance.md`.
+3. Capture `-version`, `-buildconf`, `-encoders`, and `-muxers` output from the vendored binary and confirm the published provenance/licensing notes still match the shipped artifact.
+4. Confirm the licensing package described in `docs/ffmpeg-licensing.md` is included with the release artifact, including any notices/source instructions required by linked external libraries.
+5. Regenerate the Xcode project from `project.yml` after any build-script change.
+6. Build with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project AudioConverter.xcodeproj -scheme AudioConverter -destination 'platform=macOS' build`.
+7. Run the real-FFmpeg integration test with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project AudioConverter.xcodeproj -scheme AudioConverter -destination 'platform=macOS' -only-testing:AudioConverterTests/RealFFmpegIntegrationTests test`.
+8. Run the full test suite with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project AudioConverter.xcodeproj -scheme AudioConverter -destination 'platform=macOS' test`.
 
 ## Signing + notarization
 1. Archive a Release build with the final vendored ffmpeg binary embedded at `AudioConverter.app/Contents/Resources/ffmpeg/ffmpeg`.
@@ -30,6 +32,5 @@
 - Confirm output files land beside their source files.
 
 ## Current known gaps
-- The vendored FFmpeg binary is now present, but the current chosen artifact is GPL-enabled and therefore conflicts with the repo's earlier LGPL-only distribution policy.
-- The release bundle still needs explicit notice packaging and a policy decision: either replace the vendored binary with an LGPL-compatible build or ship under GPL-compliant distribution terms.
+- The GPL-policy blocker is resolved for the current vendored binary, but the release bundle still needs explicit notice packaging/source-offer material for FFmpeg and the linked external audio libraries.
 - Release automation for nested executable signing and notarization remains documented but not fully scripted yet.

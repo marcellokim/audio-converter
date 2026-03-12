@@ -55,7 +55,7 @@ Run tests:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -scheme AudioConverter -destination 'platform=macOS' test
 ```
 
-Current verification note (2026-03-12): a fresh build succeeds, the default scheme xcresult records both `AudioConverterTests` and `AudioConverterUITests` with passing results, and the integration test converts a generated WAV fixture to MP3 using the vendored FFmpeg binary.
+Current verification note (2026-03-13): the vendored FFmpeg binary has been replaced with an LGPL-compatible local build from the official FFmpeg `8.0.1` source tarball, a fresh build succeeds, the real-FFmpeg integration test passes, and the full default scheme test run remains green.
 
 ## FFmpeg bundle expectation
 The build script embeds the vendored binary from:
@@ -64,14 +64,15 @@ The build script embeds the vendored binary from:
 AudioConverter/Resources/ffmpeg/ffmpeg
 ```
 
-The current vendored artifact is FFmpeg `8.0.1` for macOS `arm64`. See `docs/ffmpeg-provenance.md` for the exact source URL and checksums.
+The current vendored artifact is FFmpeg `8.0.1` for macOS `arm64`, built locally from the official FFmpeg source tarball. See `docs/ffmpeg-provenance.md` for the exact source URL, checksums, and linked codec-library provenance.
 
 ## Current release caveat
 - The vendored FFmpeg artifact is operationally present and verified for local conversion tests.
-- Its upstream build configuration includes `--enable-gpl`, so it does **not** satisfy the repo's earlier LGPL-only release policy. See `docs/ffmpeg-licensing.md` before distributing a release.
+- The old GPL-policy blocker is resolved for the current vendored build: its recorded build configuration omits `--enable-gpl` / `--enable-nonfree`, and `ffmpeg -L` reports LGPL `2.1 or later`.
+- Release packaging still needs the matching FFmpeg/LGPL notices and third-party codec-library provenance before distribution. See `docs/ffmpeg-licensing.md`.
 
 ## Next implementation milestones
 - wire the current UI shell to the file picker and conversion coordinator
 - connect startup self-check feedback more directly to launch-time UI state
 - finish release automation for nested executable signing and notarization
-- replace the current GPL-enabled FFmpeg artifact if an LGPL-only distribution policy remains required
+- package the final FFmpeg/LGPL + external-library notice bundle for distribution
