@@ -15,4 +15,12 @@ final class OpenPanelPresenterTests: XCTestCase {
         XCTAssertEqual(files.map(\.url), urls)
         XCTAssertEqual(files.map(\.displayName), ["first.wav", "second.aiff"])
     }
+
+    func testSelectFilesReturnsEmptyWhenUserCancelsPanel() {
+        let presenter = OpenPanelPresenter(adapter: StubOpenPanelAdapter(urls: []))
+
+        let files = presenter.selectFiles()
+
+        XCTAssertTrue(files.isEmpty)
+    }
 }

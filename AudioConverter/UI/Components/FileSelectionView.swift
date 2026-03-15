@@ -11,7 +11,7 @@ struct FileSelectionView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Source files")
                         .font(.custom("Avenir Next Condensed", size: 24).weight(.semibold))
-                    Text("Original folders stay intact. Outputs render beside the source.")
+                    Text("Original folders stay intact. Converted outputs render beside the source.")
                         .font(.custom("Menlo", size: 11))
                         .foregroundStyle(.secondary)
                 }
@@ -21,12 +21,16 @@ struct FileSelectionView: View {
                     .disabled(!isEnabled)
             }
 
+            Text(helperText)
+                .font(.custom("Menlo", size: 11))
+                .foregroundStyle(.secondary)
+
             if files.isEmpty {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color.primary.opacity(0.04))
                     .frame(minHeight: 108)
                     .overlay(alignment: .leading) {
-                        Text("No stems loaded yet.")
+                        Text("No source files selected yet.")
                             .font(.custom("Hoefler Text", size: 22))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 20)
@@ -53,5 +57,17 @@ struct FileSelectionView: View {
                 }
             }
         }
+    }
+
+    private var helperText: String {
+        if !isEnabled && files.isEmpty {
+            return "File browsing unlocks once the bundled ffmpeg startup check succeeds."
+        }
+
+        if files.isEmpty {
+            return "Choose one or more source files to stage the next conversion batch."
+        }
+
+        return "\(files.count) file(s) staged. Converted outputs stay beside each original file."
     }
 }

@@ -5,14 +5,16 @@ struct BatchStatusListView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Batch ledger")
+            Text("Batch status")
                 .font(.custom("Avenir Next Condensed", size: 24).weight(.semibold))
 
             if snapshots.isEmpty {
-                Text("Queued, running, skipped, and completed items will appear here.")
+                Text("Queued, running, skipped, and completed items will appear here once conversion wiring is active.")
                     .font(.custom("Menlo", size: 11))
                     .foregroundStyle(.secondary)
             } else {
+                summaryRow
+
                 ForEach(snapshots) { snapshot in
                     HStack(alignment: .top, spacing: 12) {
                         Capsule()
@@ -33,6 +35,61 @@ struct BatchStatusListView: View {
                     .padding(14)
                     .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
+            }
+        }
+    }
+
+    private var summaryItems: [(label: String, count: Int, color: Color)] {
+        let queuedCount = snapshots.filter {
+            if case .queued = $0.state {
+                return true
+            }
+            return false
+        }.count
+        let runningCount = snapshots.filter {
+            if case .running = $0.state {
+                return true
+            }
+            return false
+        }.count
+        let succeededCount = snapshots.filter {
+            if case .succeeded = $0.state {
+                return true
+            }
+            return false
+        }.count
+        let skippedCount = snapshots.filter {
+            if case .skipped = $0.state {
+                return true
+            }
+            return false
+        }.count
+        let failedCount = snapshots.filter {
+            if case .failed = $0.state {
+                return true
+            }
+            return false
+        }.count
+
+        return [
+            ("Queued", queuedCount, .secondary),
+            ("Running", runningCount, .orange),
+            ("Complete", succeededCount, .green),
+            ("Skipped", skippedCount, .yellow),
+            ("Failed", failedCount, .red)
+        ].filter { $0.count > 0 }
+    }
+
+    private var summaryRow: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(summaryItems.enumerated()), id: \.offset) { entry in
+                let item = entry.element
+                Text("\(item.label) \(item.count)")
+                    .font(.custom("Menlo", size: 10))
+                    .foregroundStyle(item.color)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(item.color.opacity(0.10), in: Capsule())
             }
         }
     }

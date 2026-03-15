@@ -12,7 +12,7 @@ This repository now contains:
 - format registry, startup self-check, and conversion core files
 - distribution, provenance, and licensing notes in `docs/`
 
-The conversion core is now verified against the vendored FFmpeg binary, but the current UI is still a scaffold shell rather than a polished end-to-end product flow.
+The conversion core is now verified against the vendored FFmpeg binary, and the current SwiftUI shell now runs a launch-time ffmpeg self-check, exposes an in-app retry path for startup failures, opens the real macOS file picker, and drives conversions through reusable status/file-selection/format/batch components.
 
 ## Project structure
 - `project.yml`: XcodeGen project definition
@@ -72,7 +72,7 @@ The current vendored artifact is FFmpeg `8.0.1` for macOS `arm64`, built locally
 - Release packaging still needs the matching FFmpeg/LGPL notices and third-party codec-library provenance before distribution. See `docs/ffmpeg-licensing.md`.
 
 ## Next implementation milestones
-- wire the current UI shell to the file picker and conversion coordinator
-- connect startup self-check feedback more directly to launch-time UI state
+- add live per-file progress/cancellation on top of the current batch conversion flow
+- harden UI automation around the real macOS open-panel interaction
 - finish release automation for nested executable signing and notarization
 - package the final FFmpeg/LGPL + external-library notice bundle for distribution
