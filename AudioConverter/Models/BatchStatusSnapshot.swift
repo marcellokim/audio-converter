@@ -6,10 +6,21 @@ struct BatchStatusSnapshot: Identifiable, Equatable {
     let state: ConversionItemState
     let detail: String
 
+    init(id: UUID = UUID(), fileName: String, state: ConversionItemState) {
+        self.id = id
+        self.fileName = fileName
+        self.state = state
+        self.detail = state.detail
+    }
+
     init(id: UUID = UUID(), fileName: String, state: ConversionItemState, detail: String) {
         self.id = id
         self.fileName = fileName
         self.state = state
         self.detail = detail
+    }
+
+    func updating(state: ConversionItemState) -> BatchStatusSnapshot {
+        BatchStatusSnapshot(id: id, fileName: fileName, state: state)
     }
 }

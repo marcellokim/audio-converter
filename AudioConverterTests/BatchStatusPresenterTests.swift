@@ -36,4 +36,14 @@ final class BatchStatusPresenterTests: XCTestCase {
         XCTAssertEqual(snapshot.state, .running)
         XCTAssertEqual(snapshot.detail, "Rendering with ffmpeg.")
     }
+
+    func testCancelledStateProducesReadableSnapshot() {
+        let presenter = BatchStatusPresenter()
+
+        let snapshot = presenter.makeSnapshot(fileName: "demo.wav", state: .cancelled)
+
+        XCTAssertEqual(snapshot.fileName, "demo.wav")
+        XCTAssertEqual(snapshot.state, .cancelled)
+        XCTAssertEqual(snapshot.detail, "Cancelled before completion.")
+    }
 }

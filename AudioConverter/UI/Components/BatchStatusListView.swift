@@ -9,7 +9,7 @@ struct BatchStatusListView: View {
                 .font(.custom("Avenir Next Condensed", size: 24).weight(.semibold))
 
             if snapshots.isEmpty {
-                Text("Queued, running, skipped, and completed items will appear here once conversion wiring is active.")
+                Text("Queued, running, skipped, cancelled, and completed items will appear here once conversion wiring is active.")
                     .font(.custom("Menlo", size: 11))
                     .foregroundStyle(.secondary)
             } else {
@@ -52,6 +52,12 @@ struct BatchStatusListView: View {
             }
             return false
         }.count
+        let cancelledCount = snapshots.filter {
+            if case .cancelled = $0.state {
+                return true
+            }
+            return false
+        }.count
         let succeededCount = snapshots.filter {
             if case .succeeded = $0.state {
                 return true
@@ -74,6 +80,7 @@ struct BatchStatusListView: View {
         return [
             ("Queued", queuedCount, .secondary),
             ("Running", runningCount, .orange),
+            ("Cancelled", cancelledCount, .purple),
             ("Complete", succeededCount, .green),
             ("Skipped", skippedCount, .yellow),
             ("Failed", failedCount, .red)
@@ -100,6 +107,8 @@ struct BatchStatusListView: View {
             return .secondary
         case .running:
             return .orange
+        case .cancelled:
+            return .purple
         case .succeeded:
             return .green
         case .failed:

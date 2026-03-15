@@ -13,6 +13,7 @@ final class AudioConverterUITests: XCTestCase {
         app.launch()
 
         XCTAssertFalse(app.buttons["Start Conversion"].isEnabled)
+        XCTAssertFalse(app.buttons["Cancel Batch"].exists)
     }
 
     func testSelectFilesButtonBecomesEnabledAfterStartupCheck() {

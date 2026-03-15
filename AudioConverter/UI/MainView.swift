@@ -32,6 +32,12 @@ struct MainView: View {
                             .buttonStyle(.borderedProminent)
                             .disabled(!canStartConversion)
 
+                        if appState.isConverting {
+                            Button(appState.isCancelling ? "Cancelling Batch…" : "Cancel Batch", action: handleCancelConversion)
+                                .buttonStyle(.bordered)
+                                .disabled(!appState.canCancelConversion)
+                        }
+
                         if appState.canRetryStartupChecks {
                             Button("Retry Startup Check", action: handleRetryStartupChecks)
                                 .buttonStyle(.bordered)
@@ -100,7 +106,7 @@ struct MainView: View {
             return "Startup blocked"
         case .ready:
             if appState.isConverting {
-                return "Converting batch"
+                return appState.isCancelling ? "Cancelling batch" : "Converting batch"
             }
 
             if let format = selectedFormat {
@@ -123,7 +129,8 @@ struct MainView: View {
             return message
         case .ready:
             if appState.isConverting, let format = selectedFormat {
-                return "Rendering \(selectedAudioFiles.count) file(s) to \(format.displayName). \(appState.statusMessage)"
+                let verb = appState.isCancelling ? "Cancelling" : "Rendering"
+                return "\(verb) \(selectedAudioFiles.count) file(s) to \(format.displayName). \(appState.statusMessage)"
             }
 
             if let format = selectedFormat {
@@ -145,6 +152,10 @@ struct MainView: View {
         case .startupError:
             return "Retry the startup self-check to continue."
         case .ready:
+            if appState.isCancelling {
+                return "Cancellation is in progress. Controls will re-enable when the batch finishes."
+            }
+
             if appState.isConverting {
                 return "Conversion is running. Controls will re-enable when the batch completes."
             }
@@ -177,6 +188,10 @@ struct MainView: View {
 
     private func handleStartConversion() {
         appState.startConversion()
+    }
+
+    private func handleCancelConversion() {
+        appState.cancelConversion()
     }
 
     private func handleRetryStartupChecks() {

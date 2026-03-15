@@ -125,10 +125,79 @@ final class AudioConverterTests: XCTestCase {
         XCTAssertFalse(state.canStartConversion)
     }
 
-    private func makeReadyAppState() -> AppState {
+    func testStartConversionConsumesLiveSessionUpdatesBeforeCompletion() {
+        let session = ControlledConversionSession()
+        let state = makeReadyAppState(session: session)
+        let snapshotID = UUID()
+        let queued = BatchStatusSnapshot(id: snapshotID, fileName: "example.wav", state: .queued)
+        let running = queued.updating(state: .running)
+        let completed = queued.updating(state: .succeeded(outputURL: URL(fileURLWithPath: "/tmp/example.mp3")))
+
+        state.selectedFiles = [URL(fileURLWithPath: "/tmp/example.wav")]
+        state.outputFormat = "mp3"
+        session.onStart = {
+            session.emitUpdate([queued])
+            session.emitUpdate([running])
+        }
+
+        state.startConversion()
+
+        XCTAssertEqual(session.startCallCount, 1)
+        XCTAssertTrue(state.isConverting)
+        XCTAssertFalse(state.isCancelling)
+        XCTAssertTrue(state.canCancelConversion)
+        XCTAssertEqual(state.batchSnapshots, [running])
+
+        session.emitCompletion([completed])
+
+        XCTAssertFalse(state.isConverting)
+        XCTAssertFalse(state.isCancelling)
+        XCTAssertFalse(state.canCancelConversion)
+        XCTAssertEqual(state.batchSnapshots, [completed])
+        XCTAssertEqual(state.statusMessage, "Finished conversion to MP3: 1 converted.")
+    }
+
+    func testCancelConversionRequestsSessionCancellationAndTracksCancelledCompletion() {
+        let session = ControlledConversionSession()
+        let state = makeReadyAppState(session: session)
+        let snapshotID = UUID()
+        let queued = BatchStatusSnapshot(id: snapshotID, fileName: "example.wav", state: .queued)
+        let cancelled = queued.updating(state: .cancelled)
+
+        state.selectedFiles = [URL(fileURLWithPath: "/tmp/example.wav")]
+        state.outputFormat = "mp3"
+        session.onStart = {
+            session.emitUpdate([queued])
+        }
+
+        state.startConversion()
+        state.cancelConversion()
+
+        XCTAssertEqual(session.cancelCallCount, 1)
+        XCTAssertTrue(state.isConverting)
+        XCTAssertTrue(state.isCancelling)
+        XCTAssertFalse(state.canCancelConversion)
+        XCTAssertEqual(state.statusMessage, "Cancelling current batch…")
+
+        session.emitUpdate([cancelled])
+        session.emitCompletion([cancelled])
+
+        XCTAssertFalse(state.isConverting)
+        XCTAssertFalse(state.isCancelling)
+        XCTAssertEqual(state.batchSnapshots, [cancelled])
+        XCTAssertEqual(state.statusMessage, "Finished conversion to MP3: 1 cancelled.")
+    }
+
+    private func makeReadyAppState(session: ControlledConversionSession? = nil) -> AppState {
+        let controlledSession = session ?? ControlledConversionSession()
         let state = AppState(
             resolveFFmpegURL: { .ready(URL(fileURLWithPath: "/bin/sh")) },
-            validateStartupCapabilities: { _ in .ready }
+            validateStartupCapabilities: { _ in .ready },
+            makeConversionSession: { _, _, _, onUpdate, onCompletion in
+                controlledSession.onUpdate = onUpdate
+                controlledSession.onCompletion = onCompletion
+                return controlledSession
+            }
         )
         state.performStartupChecks()
         waitForStartupState(of: state) { $0 == .ready }
@@ -147,5 +216,30 @@ final class AudioConverterTests: XCTestCase {
         }
 
         XCTAssertTrue(predicate(state.startupState), "Timed out waiting for startup state, got \(state.startupState)")
+    }
+}
+
+private final class ControlledConversionSession: BatchConversionSessioning {
+    var onStart: (() -> Void)?
+    var onUpdate: (([BatchStatusSnapshot]) -> Void)?
+    var onCompletion: (([BatchStatusSnapshot]) -> Void)?
+    private(set) var startCallCount = 0
+    private(set) var cancelCallCount = 0
+
+    func start() {
+        startCallCount += 1
+        onStart?()
+    }
+
+    func cancelAll() {
+        cancelCallCount += 1
+    }
+
+    func emitUpdate(_ snapshots: [BatchStatusSnapshot]) {
+        onUpdate?(snapshots)
+    }
+
+    func emitCompletion(_ snapshots: [BatchStatusSnapshot]) {
+        onCompletion?(snapshots)
     }
 }

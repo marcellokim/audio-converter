@@ -89,10 +89,43 @@ final class ConversionEngineTests: XCTestCase {
         XCTAssertEqual(fileManager.removedURLs, [job.temporaryOutputURL])
     }
 
+    func testStartHandleCancelMapsCancelledTaskToCancelledAndCleansUpTemporaryOutput() {
+        let fileManager = MockFileManager()
+        let runner = MockFFmpegRunner()
+        let task = MockFFmpegRunner.Task()
+        task.onCancel = {
+            task.complete(
+                with: .success(
+                    FFmpegRunResult(
+                        terminationStatus: 15,
+                        standardOutput: "",
+                        standardError: "terminated",
+                        wasCancelled: true
+                    )
+                )
+            )
+        }
+        runner.startResults = [.success(task)]
+        let engine = ConversionEngine(fileManager: fileManager, ffmpegRunner: runner)
+        let job = makeJob(outputExtension: "m4a", temporaryName: ".track.partial.m4a")
+
+        let startResult = engine.start(job: job, ffmpegURL: URL(fileURLWithPath: "/bin/sh"))
+
+        guard case let .success(handle) = startResult else {
+            return XCTFail("Expected successful execution handle")
+        }
+
+        handle.cancel()
+
+        XCTAssertEqual(task.cancelCount, 1)
+        XCTAssertEqual(handle.waitForCompletion(), .cancelled)
+        XCTAssertEqual(fileManager.removedURLs, [job.temporaryOutputURL])
+    }
+
     func testRunMapsLaunchFailuresAndCleansUpTemporaryOutput() {
         let fileManager = MockFileManager()
         let runner = MockFFmpegRunner()
-        runner.results = [Result.failure(MockFFmpegRunner.RunnerError.launchFailed)]
+        runner.startResults = [.failure(MockFFmpegRunner.RunnerError.launchFailed)]
         let engine = ConversionEngine(fileManager: fileManager, ffmpegRunner: runner)
         let job = makeJob(outputExtension: "ogg", temporaryName: ".track.partial.ogg")
 

@@ -1,5 +1,12 @@
 import Foundation
 
+protocol BatchConversionSessioning: AnyObject {
+    func start()
+    func cancelAll()
+}
+
+extension BatchConversionSession: BatchConversionSessioning {}
+
 final class AppState: ObservableObject {
     enum FFmpegResolution {
         case ready(URL)
@@ -9,7 +16,13 @@ final class AppState: ObservableObject {
     typealias FFmpegResolver = () -> FFmpegResolution
     typealias CapabilityValidator = (URL) -> StartupState
     typealias FileSelector = () -> [SelectedAudioFile]
-    typealias ConversionProcessor = ([SelectedAudioFile], SupportedFormat, URL) -> [BatchStatusSnapshot]
+    typealias ConversionSessionFactory = (
+        [SelectedAudioFile],
+        SupportedFormat,
+        URL,
+        @escaping ([BatchStatusSnapshot]) -> Void,
+        @escaping ([BatchStatusSnapshot]) -> Void
+    ) -> any BatchConversionSessioning
 
     @Published var selectedFiles: [URL] = [] {
         didSet {
@@ -28,27 +41,35 @@ final class AppState: ObservableObject {
     @Published private(set) var startupState: StartupState = .idle
     @Published private(set) var batchSnapshots: [BatchStatusSnapshot] = []
     @Published private(set) var isConverting = false
+    @Published private(set) var isCancelling = false
 
     private let resolveFFmpegURL: FFmpegResolver
     private let validateStartupCapabilities: CapabilityValidator
     private let selectAudioFiles: FileSelector
-    private let processConversion: ConversionProcessor
+    private let makeConversionSession: ConversionSessionFactory
 
     private var ffmpegURL: URL?
     private var hasPerformedStartupChecks = false
+    private var currentSession: (any BatchConversionSessioning)?
 
     init(
         resolveFFmpegURL: @escaping FFmpegResolver = AppState.defaultResolveFFmpegURL,
         validateStartupCapabilities: @escaping CapabilityValidator = { FFmpegStartupSelfCheck().validateCapabilities(for: $0) },
         selectAudioFiles: @escaping FileSelector = { OpenPanelPresenter().selectFiles() },
-        processConversion: @escaping ConversionProcessor = { files, format, ffmpegURL in
-            ConversionCoordinator().process(files: files, format: format, ffmpegURL: ffmpegURL)
+        makeConversionSession: @escaping ConversionSessionFactory = { files, format, ffmpegURL, onUpdate, onCompletion in
+            ConversionCoordinator().makeSession(
+                files: files,
+                format: format,
+                ffmpegURL: ffmpegURL,
+                onUpdate: onUpdate,
+                onCompletion: onCompletion
+            )
         }
     ) {
         self.resolveFFmpegURL = resolveFFmpegURL
         self.validateStartupCapabilities = validateStartupCapabilities
         self.selectAudioFiles = selectAudioFiles
-        self.processConversion = processConversion
+        self.makeConversionSession = makeConversionSession
     }
 
     var selectedAudioFiles: [SelectedAudioFile] {
@@ -86,6 +107,10 @@ final class AppState: ObservableObject {
         }
 
         return true
+    }
+
+    var canCancelConversion: Bool {
+        isConverting && !isCancelling && currentSession != nil
     }
 
     func performStartupChecksIfNeeded() {
@@ -214,23 +239,55 @@ final class AppState: ObservableObject {
         }
 
         isConverting = true
-        batchSnapshots = makeQueuedSnapshots(for: files)
+        isCancelling = false
         statusMessage = "Converting \(files.count) file(s) to \(format.displayName)…"
+        batchSnapshots = []
 
-        let processConversion = self.processConversion
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let snapshots = processConversion(files, format, ffmpegURL)
+        let session = makeConversionSession(
+            files,
+            format,
+            ffmpegURL,
+            { [weak self] snapshots in
+                self?.performOnMain {
+                    guard let self else {
+                        return
+                    }
 
-            DispatchQueue.main.async {
-                guard let self else {
-                    return
+                    self.batchSnapshots = snapshots
+                    if self.isConverting {
+                        self.statusMessage = self.isCancelling
+                            ? "Cancelling current batch…"
+                            : self.makeInFlightStatusMessage(for: snapshots, format: format)
+                    }
                 }
+            },
+            { [weak self] snapshots in
+                self?.performOnMain {
+                    guard let self else {
+                        return
+                    }
 
-                self.isConverting = false
-                self.batchSnapshots = snapshots
-                self.statusMessage = self.makeCompletionStatusMessage(for: snapshots, format: format)
+                    self.isConverting = false
+                    self.isCancelling = false
+                    self.currentSession = nil
+                    self.batchSnapshots = snapshots
+                    self.statusMessage = self.makeCompletionStatusMessage(for: snapshots, format: format)
+                }
             }
+        )
+
+        currentSession = session
+        session.start()
+    }
+
+    func cancelConversion() {
+        guard let currentSession, canCancelConversion else {
+            return
         }
+
+        isCancelling = true
+        statusMessage = "Cancelling current batch…"
+        currentSession.cancelAll()
     }
 
     private func refreshStatusMessageForCurrentInputs() {
@@ -264,11 +321,6 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func makeQueuedSnapshots(for files: [SelectedAudioFile]) -> [BatchStatusSnapshot] {
-        let presenter = BatchStatusPresenter()
-        return files.map { presenter.makeSnapshot(fileName: $0.displayName, state: .queued) }
-    }
-
     private func makeCompletionStatusMessage(for snapshots: [BatchStatusSnapshot], format: SupportedFormat) -> String {
         let convertedCount = snapshots.filter {
             if case .succeeded = $0.state {
@@ -291,10 +343,18 @@ final class AppState: ObservableObject {
             return false
         }.count
 
+        let cancelledCount = snapshots.filter {
+            if case .cancelled = $0.state {
+                return true
+            }
+            return false
+        }.count
+
         let summary = [
             convertedCount > 0 ? "\(convertedCount) converted" : nil,
             skippedCount > 0 ? "\(skippedCount) skipped" : nil,
-            failedCount > 0 ? "\(failedCount) failed" : nil
+            failedCount > 0 ? "\(failedCount) failed" : nil,
+            cancelledCount > 0 ? "\(cancelledCount) cancelled" : nil
         ]
         .compactMap { $0 }
         .joined(separator: ", ")
@@ -306,8 +366,44 @@ final class AppState: ObservableObject {
         return "Finished conversion to \(format.displayName): \(summary)."
     }
 
+    private func makeInFlightStatusMessage(for snapshots: [BatchStatusSnapshot], format: SupportedFormat) -> String {
+        let summary = [
+            summaryCount(in: snapshots, matching: { if case .queued = $0 { return true } else { return false } }, label: "queued"),
+            summaryCount(in: snapshots, matching: { if case .running = $0 { return true } else { return false } }, label: "running"),
+            summaryCount(in: snapshots, matching: { if case .succeeded = $0 { return true } else { return false } }, label: "converted"),
+            summaryCount(in: snapshots, matching: { if case .skipped = $0 { return true } else { return false } }, label: "skipped"),
+            summaryCount(in: snapshots, matching: { if case .failed = $0 { return true } else { return false } }, label: "failed"),
+            summaryCount(in: snapshots, matching: { if case .cancelled = $0 { return true } else { return false } }, label: "cancelled")
+        ]
+        .compactMap { $0 }
+        .joined(separator: ", ")
+
+        if summary.isEmpty {
+            return "Converting \(snapshots.count) file(s) to \(format.displayName)…"
+        }
+
+        return "Converting to \(format.displayName): \(summary)."
+    }
+
+    private func summaryCount(
+        in snapshots: [BatchStatusSnapshot],
+        matching predicate: (ConversionItemState) -> Bool,
+        label: String
+    ) -> String? {
+        let count = snapshots.filter { predicate($0.state) }.count
+        return count > 0 ? "\(count) \(label)" : nil
+    }
+
     private static var supportedFormatSummary: String {
         FormatRegistry.allFormats.map(\.id).joined(separator: ", ")
+    }
+
+    private func performOnMain(_ action: @escaping () -> Void) {
+        if Thread.isMainThread {
+            action()
+        } else {
+            DispatchQueue.main.async(execute: action)
+        }
     }
 
     private static func defaultResolveFFmpegURL() -> FFmpegResolution {
