@@ -6,11 +6,12 @@ usage() {
 Usage: scripts/release-sign-and-notarize.sh [options]
 
 Automates the post-build macOS release lane for AudioConverter:
-1. verify the built app bundle contains the vendored ffmpeg binary
-2. sign the nested ffmpeg executable
-3. re-sign the app bundle with hardened runtime
-4. package the app for notarization
-5. optionally submit with notarytool, staple, and validate Gatekeeper
+1. stage the canonical `ThirdPartyNotices` bundle into the app
+2. verify the built app bundle contains the vendored ffmpeg binary
+3. sign the nested ffmpeg executable
+4. re-sign the app bundle with hardened runtime
+5. package the app for notarization
+6. optionally submit with notarytool, staple, and validate Gatekeeper
 
 Options:
   --mode rehearse|run          Default: rehearse
@@ -143,16 +144,22 @@ app_path="${app_path%/}"
 app_name="$(basename "$app_path")"
 app_stem="${app_name%.app}"
 embedded_ffmpeg_path="$app_path/Contents/Resources/ffmpeg/ffmpeg"
+notice_bundle_root="$app_path/Contents/Resources/ThirdPartyNotices"
 zip_path="$output_dir/${app_stem}-for-notarization.zip"
 notary_log_path="$output_dir/notarytool-submit.json"
+script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+repo_root="$(CDPATH= cd -- "$script_dir/.." && pwd)"
+package_notice_script="$repo_root/scripts/package-notice-bundle.sh"
 
 ensure_prerequisites() {
   require_command xcrun
   require_command codesign
   require_command ditto
   require_command spctl
+  require_command bash
   require_directory "$app_path"
   require_file "$embedded_ffmpeg_path"
+  require_file "$package_notice_script"
   mkdir -p "$output_dir"
   require_xcrun_tool stapler
 
@@ -165,6 +172,13 @@ ensure_prerequisites() {
     require_value "AUDIOCONVERTER_SIGNING_IDENTITY / --signing-identity" "$signing_identity"
     require_value "AUDIOCONVERTER_NESTED_SIGNING_IDENTITY / --nested-signing-identity" "$nested_signing_identity"
   fi
+}
+
+stage_notice_bundle() {
+  run_command "$package_notice_script" "$app_path"
+  require_directory "$notice_bundle_root"
+  require_file "$notice_bundle_root/NOTICE-MANIFEST.txt"
+  require_file "$notice_bundle_root/NOTICE-MANIFEST.sha256"
 }
 
 package_for_notarization() {
@@ -220,11 +234,13 @@ staple_and_validate() {
 }
 
 print_rehearsal_summary() {
-  echo "[rehearse] Verified app bundle layout and packaged a notarization zip."
+  echo "[rehearse] Staged ThirdPartyNotices, verified app bundle layout, and packaged a notarization zip."
   echo "[rehearse] App bundle: $app_path"
   echo "[rehearse] Nested executable: $embedded_ffmpeg_path"
+  echo "[rehearse] Notice bundle: $notice_bundle_root"
   echo "[rehearse] Notarization zip: $zip_path"
   echo "[rehearse] Full run command plan:"
+  print_command "$package_notice_script" "$app_path"
   print_command codesign --force --timestamp --options runtime --sign "${nested_signing_identity:-<nested-signing-identity>}" "$embedded_ffmpeg_path"
   print_command codesign --force --timestamp --options runtime --sign "${signing_identity:-<signing-identity>}" --preserve-metadata=identifier,entitlements "$app_path"
   print_command codesign --verify --deep --strict --verbose=2 "$app_path"
@@ -249,6 +265,7 @@ print_rehearsal_summary() {
 }
 
 ensure_prerequisites
+stage_notice_bundle
 package_for_notarization
 
 if [ "$mode" = "rehearse" ]; then

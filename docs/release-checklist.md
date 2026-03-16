@@ -17,7 +17,7 @@
 8. Run the full test suite with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project AudioConverter.xcodeproj -scheme AudioConverter -destination 'platform=macOS' test`.
 
 ## Signing + notarization
-1. Run the scripted rehearsal path to verify the built bundle contains the nested vendored `ffmpeg` executable and to generate the notarization zip:
+1. Run the scripted rehearsal path to stage `Contents/Resources/ThirdPartyNotices`, verify the built bundle contains the nested vendored `ffmpeg` executable, and generate the notarization zip:
    ```bash
    scripts/release-sign-and-notarize.sh --mode rehearse --app build/Release/AudioConverter.app
    ```
@@ -42,5 +42,4 @@
 - Confirm output files land beside their source files.
 
 ## Current known gaps
-- The GPL-policy blocker is resolved for the current vendored binary, but the release bundle still needs the explicit P1 notice/source-offer material for FFmpeg and the linked external audio libraries before distribution.
 - The P2 automation path is now scripted, but a real notarization pass still requires release-machine access to the Apple signing identity and stored `notarytool` credentials.

@@ -11,11 +11,12 @@
 `scripts/release-sign-and-notarize.sh` now owns the repeatable post-build release lane for nested signing and notarization.
 
 ### What the script does
-1. Verifies the built app bundle exists and still contains `Contents/Resources/ffmpeg/ffmpeg`.
-2. Signs the nested vendored `ffmpeg` executable before the app bundle.
-3. Re-signs `AudioConverter.app` with hardened runtime preserved.
-4. Packages the app into a notarization zip.
-5. Optionally submits the zip with `xcrun notarytool`, waits for completion, staples the ticket, and runs `spctl` validation.
+1. Stages the canonical `Contents/Resources/ThirdPartyNotices` bundle via `scripts/package-notice-bundle.sh`.
+2. Verifies the built app bundle exists and still contains `Contents/Resources/ffmpeg/ffmpeg`.
+3. Signs the nested vendored `ffmpeg` executable before the app bundle.
+4. Re-signs `AudioConverter.app` with hardened runtime preserved.
+5. Packages the app into a notarization zip.
+6. Optionally submits the zip with `xcrun notarytool`, waits for completion, staples the ticket, and runs `spctl` validation.
 
 ### Supported inputs
 The script accepts either CLI flags or environment variables:
@@ -25,7 +26,7 @@ The script accepts either CLI flags or environment variables:
 - `AUDIOCONVERTER_TEAM_ID` — optional team id for shared release machines / CI
 
 ### Rehearsal mode
-Use rehearsal mode on any machine that can build the app, even if release credentials are not available yet. It validates the bundle layout, emits the notarization zip, and prints the exact commands that a full release run will execute.
+Use rehearsal mode on any machine that can build the app, even if release credentials are not available yet. It stages the release notice bundle, validates the bundle layout, emits the notarization zip, and prints the exact commands that a full release run will execute.
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
