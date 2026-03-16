@@ -19,9 +19,15 @@ struct FFmpegRunResult: Equatable {
     }
 }
 
+struct FFmpegProgressEvent: Equatable {
+    let outTimeSeconds: Double?
+    let progressState: String
+}
+
 protocol FFmpegTaskRunning {
     func wait() throws -> FFmpegRunResult
     func cancel()
+    func setProgressHandler(_ handler: @escaping (FFmpegProgressEvent) -> Void)
 }
 
 protocol FFmpegRunning {
@@ -48,4 +54,6 @@ private struct ImmediateFFmpegTask: FFmpegTaskRunning {
     }
 
     func cancel() {}
+
+    func setProgressHandler(_ handler: @escaping (FFmpegProgressEvent) -> Void) {}
 }

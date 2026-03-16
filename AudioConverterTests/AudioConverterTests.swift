@@ -164,12 +164,54 @@ final class AudioConverterTests: XCTestCase {
         XCTAssertTrue(state.canStartConversion)
     }
 
+    func testRemoveSelectedFileRemovesOnlyThatFileAndClearsStaleSnapshots() {
+        let session = ControlledConversionSession()
+        let state = makeReadyAppState(session: session)
+        let first = URL(fileURLWithPath: "/tmp/voice-note.wav")
+        let second = URL(fileURLWithPath: "/tmp/session.aiff")
+        state.selectedFiles = [first, second]
+        state.outputFormat = "mp3"
+        let completed = BatchStatusSnapshot(
+            fileName: "voice-note.wav",
+            state: .succeeded(outputURL: URL(fileURLWithPath: "/tmp/voice-note.mp3"))
+        )
+
+        state.startConversion()
+        session.emitCompletion([completed])
+
+        state.removeSelectedFile(SelectedAudioFile(url: first))
+
+        XCTAssertEqual(state.selectedFiles, [second])
+        XCTAssertTrue(state.batchSnapshots.isEmpty)
+        XCTAssertTrue(state.canStartConversion)
+        XCTAssertTrue(state.canRemoveSelectedFiles)
+    }
+
+    func testRemoveSelectedFileCanClearFinalStagedFile() {
+        let state = makeReadyAppState()
+        let onlyFile = URL(fileURLWithPath: "/tmp/voice-note.wav")
+        state.selectedFiles = [onlyFile]
+        state.outputFormat = "mp3"
+
+        state.removeSelectedFile(SelectedAudioFile(url: onlyFile))
+
+        XCTAssertTrue(state.selectedFiles.isEmpty)
+        XCTAssertFalse(state.canStartConversion)
+        XCTAssertFalse(state.canRemoveSelectedFiles)
+    }
+
     func testStartConversionConsumesLiveSessionUpdatesBeforeCompletion() {
         let session = ControlledConversionSession()
         let state = makeReadyAppState(session: session)
         let snapshotID = UUID()
         let queued = BatchStatusSnapshot(id: snapshotID, fileName: "example.wav", state: .queued)
-        let running = queued.updating(state: .running)
+        let running = queued
+            .updating(state: .running)
+            .updatingProgress(
+                fractionCompleted: 0.5,
+                isIndeterminate: false,
+                progressDetail: "50% complete"
+            )
         let completed = queued.updating(state: .succeeded(outputURL: URL(fileURLWithPath: "/tmp/example.mp3")))
 
         state.selectedFiles = [URL(fileURLWithPath: "/tmp/example.wav")]
@@ -186,6 +228,8 @@ final class AudioConverterTests: XCTestCase {
         XCTAssertFalse(state.isCancelling)
         XCTAssertTrue(state.canCancelConversion)
         XCTAssertEqual(state.batchSnapshots, [running])
+        XCTAssertEqual(state.batchSnapshots.first?.progressPercentText, "50%")
+        XCTAssertEqual(state.batchSnapshots.first?.displayedDetail, "50% complete")
 
         session.emitCompletion([completed])
 

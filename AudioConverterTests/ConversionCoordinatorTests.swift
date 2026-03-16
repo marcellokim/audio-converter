@@ -3,7 +3,7 @@ import XCTest
 @testable import AudioConverter
 
 final class ConversionCoordinatorTests: XCTestCase {
-    func testProcessReturnsSnapshotsInInputOrderForMixedResults() {
+    func testProcessReturnsSnapshotsInInputOrderForMixedResults() throws {
         let fileManager = MockFileManager()
         let runner = MockFFmpegRunner()
         runner.results = [
@@ -70,7 +70,11 @@ final class ConversionCoordinatorTests: XCTestCase {
         )
         runner.startResults = [.success(firstTask), .success(secondTask)]
 
-        let engine = ConversionEngine(fileManager: fileManager, ffmpegRunner: runner)
+        let engine = ConversionEngine(
+            fileManager: fileManager,
+            ffmpegRunner: runner,
+            inputDurationProvider: FixedInputDurationProvider(durationSeconds: 10)
+        )
         let coordinator = ConversionCoordinator(engine: engine, presenter: BatchStatusPresenter(), maximumConcurrentJobs: 2)
         let files = [
             SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/intro.wav")),
@@ -80,6 +84,7 @@ final class ConversionCoordinatorTests: XCTestCase {
         let completion = expectation(description: "session completed")
         let lock = NSLock()
         var updates: [[BatchStatusSnapshot]] = []
+        var didEmitProgress = false
         var didReleaseFirstTask = false
 
         let session = coordinator.makeSession(
@@ -91,7 +96,13 @@ final class ConversionCoordinatorTests: XCTestCase {
                 updates.append(snapshots)
                 lock.unlock()
 
-                if !didReleaseFirstTask, snapshots.map(\.state) == [.running, .queued] {
+                if !didEmitProgress, snapshots.map(\.state) == [.running, .queued] {
+                    didEmitProgress = true
+                    firstTask.emitProgress(FFmpegProgressEvent(outTimeSeconds: 5, progressState: "continue"))
+                }
+
+                if !didReleaseFirstTask,
+                   snapshots.first?.progressPercentText == "50%" {
                     didReleaseFirstTask = true
                     XCTAssertEqual(runner.invocations.count, 1, "Second job should not start before the first finishes.")
                     firstTask.complete(
@@ -121,6 +132,13 @@ final class ConversionCoordinatorTests: XCTestCase {
 
         XCTAssertEqual(capturedUpdates.first?.map(\.state), [.queued, .queued])
         XCTAssertTrue(capturedUpdates.contains { $0.map(\.state) == [.running, .queued] })
+        XCTAssertTrue(
+            capturedUpdates.contains {
+                $0.first?.progressPercentText == "50%" &&
+                $0.first?.displayedDetail == "50% complete" &&
+                $0.map(\.state) == [.running, .queued]
+            }
+        )
         XCTAssertTrue(capturedUpdates.contains { $0.map(\.state) == [.succeeded(outputURL: firstOutputURL), .queued] })
         XCTAssertTrue(capturedUpdates.contains { $0.map(\.state) == [.succeeded(outputURL: firstOutputURL), .running] })
         XCTAssertEqual(capturedUpdates.last?.map(\.state), [.succeeded(outputURL: firstOutputURL), .succeeded(outputURL: secondOutputURL)])
@@ -162,7 +180,7 @@ final class ConversionCoordinatorTests: XCTestCase {
         let completion = expectation(description: "session completed after cancellation")
         let lock = NSLock()
         var updates: [[BatchStatusSnapshot]] = []
-        var session: BatchConversionSession?
+        var session: ConversionCoordinatorSession?
         var didCancel = false
 
         session = coordinator.makeSession(
@@ -202,5 +220,13 @@ final class ConversionCoordinatorTests: XCTestCase {
 
         let initialIDs = try XCTUnwrap(capturedUpdates.first?.map(\.id))
         XCTAssertTrue(capturedUpdates.allSatisfy { $0[0].id == initialIDs[0] && $0[1].id == initialIDs[1] })
+    }
+}
+
+private struct FixedInputDurationProvider: InputDurationProviding {
+    let durationSeconds: Double?
+
+    func durationSeconds(for url: URL) -> Double? {
+        durationSeconds
     }
 }

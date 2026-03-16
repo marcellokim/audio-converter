@@ -30,17 +30,56 @@ struct FFmpegStartupSelfCheck: CapabilityChecking {
         let process = Process()
         let outputPipe = Pipe()
         let errorPipe = Pipe()
+        let outputLock = NSLock()
+        let errorLock = NSLock()
+        var stdoutData = Data()
+        var stderrData = Data()
 
         process.executableURL = ffmpegURL
         process.arguments = arguments
         process.standardOutput = outputPipe
         process.standardError = errorPipe
 
+        outputPipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty else {
+                handle.readabilityHandler = nil
+                return
+            }
+
+            outputLock.lock()
+            stdoutData.append(data)
+            outputLock.unlock()
+        }
+
+        errorPipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty else {
+                handle.readabilityHandler = nil
+                return
+            }
+
+            errorLock.lock()
+            stderrData.append(data)
+            errorLock.unlock()
+        }
+
         try process.run()
         process.waitUntilExit()
 
-        let stdout = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let stderr = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        outputPipe.fileHandleForReading.readabilityHandler = nil
+        errorPipe.fileHandleForReading.readabilityHandler = nil
+
+        outputLock.lock()
+        stdoutData.append(outputPipe.fileHandleForReading.readDataToEndOfFile())
+        let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
+        outputLock.unlock()
+
+        errorLock.lock()
+        stderrData.append(errorPipe.fileHandleForReading.readDataToEndOfFile())
+        let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+        errorLock.unlock()
+
         let combined = [stdout, stderr].filter { !$0.isEmpty }.joined(separator: "\n")
 
         guard process.terminationStatus == 0 else {

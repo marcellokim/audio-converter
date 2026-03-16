@@ -1,7 +1,14 @@
 import Foundation
 
 enum FFmpegCommandBuilder {
-    private static let safetyFlags = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n"]
+    private static let safetyFlags = [
+        "-hide_banner",
+        "-loglevel", "error",
+        "-nostdin",
+        "-nostats",
+        "-progress", "pipe:1",
+        "-n"
+    ]
 
     static func makeCommand(
         ffmpegURL: URL,

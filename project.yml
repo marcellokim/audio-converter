@@ -22,6 +22,8 @@ targets:
     platform: macOS
     sources:
       - path: AudioConverter
+        excludes:
+          - Core/BatchConversionSession.swift
     configFiles:
       Debug: AudioConverter/Config/BuildSettings.xcconfig
       Release: AudioConverter/Config/BuildSettings.xcconfig

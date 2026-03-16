@@ -17,7 +17,9 @@ struct MainView: View {
                 FileSelectionView(
                     files: selectedAudioFiles,
                     action: handleSelectFiles,
-                    isEnabled: appState.canOpenFiles
+                    onRemove: handleRemoveSelectedFile,
+                    canBrowseFiles: appState.canOpenFiles,
+                    canRemoveFiles: appState.canRemoveSelectedFiles
                 )
 
                 FormatInputView(
@@ -43,6 +45,7 @@ struct MainView: View {
                         if appState.canRetryStartupChecks {
                             Button("Retry Startup Check", action: handleRetryStartupChecks)
                                 .buttonStyle(.bordered)
+                                .accessibilityIdentifier("retry-startup-check")
                         }
 
                         Text(readinessMessage)
@@ -191,6 +194,10 @@ struct MainView: View {
 
     private func handleStartConversion() {
         appState.startConversion()
+    }
+
+    private func handleRemoveSelectedFile(_ file: SelectedAudioFile) {
+        appState.removeSelectedFile(file)
     }
 
     private func handleCancelConversion() {

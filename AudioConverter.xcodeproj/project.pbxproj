@@ -36,6 +36,7 @@
 		7E0785FADA3E1B33DC3E3659 /* ConversionItemState.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACAD48F3A8F82B3D03A9917E /* ConversionItemState.swift */; };
 		7F96FA4412499722D5B415E3 /* OutputPathResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4AC8CD941BB9B4526407CB0 /* OutputPathResolver.swift */; };
 		8E98AF52D93DB3AF9C578DE5 /* FFmpegStartupSelfCheckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3229ADB81CC92BFB389C5979 /* FFmpegStartupSelfCheckTests.swift */; };
+		910362374BC0D57436FD0CDB /* InputDurationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C1482E6C52785A9BD18A31 /* InputDurationProvider.swift */; };
 		96CB7D540E19C115760B514A /* BatchStatusListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C522BA732CC5BC6BA124E813 /* BatchStatusListView.swift */; };
 		9A81415F055C4DE56BD50FD1 /* MockFFmpegRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B562AD5D5B2E53CD1CFACB26 /* MockFFmpegRunner.swift */; };
 		9BA55C840E95E63FD5C9AD15 /* FFmpegRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E2F427B338A8BCDD3F9727A /* FFmpegRunner.swift */; };
@@ -55,6 +56,7 @@
 		DA7956888C63C8218D426C5E /* FormatValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05B5C971BE5487BC47C796C8 /* FormatValidatorTests.swift */; };
 		E154554C3278E73A7C911606 /* StartupState.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE7147A8DB8882A646ECE52D /* StartupState.swift */; };
 		EC18C43AAE088E390E7D4E71 /* SpyFFmpegRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 643718D78DE82ED3B63523CA /* SpyFFmpegRunner.swift */; };
+		F1828CF1D2E0CF878E819DF1 /* ConversionCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398624677030681B22F560F3 /* ConversionCoordinatorTests.swift */; };
 		F78E0FBC616C4A16D6657011 /* DefaultFileManagerAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA8FB1B49A6305CFBCAE0758 /* DefaultFileManagerAdapter.swift */; };
 		F82DAE3A8A9DB1491330A718 /* OpenPanelPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B8250D0FFD3E4416B150AE5 /* OpenPanelPresenterTests.swift */; };
 /* End PBXBuildFile section */
@@ -82,10 +84,12 @@
 		05B5C971BE5487BC47C796C8 /* FormatValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatValidatorTests.swift; sourceTree = "<group>"; };
 		0AC90D26CC05A88A26CBB273 /* SkipReason.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkipReason.swift; sourceTree = "<group>"; };
 		0C7F18A285DF6A1DD56692F4 /* RealFFmpegIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealFFmpegIntegrationTests.swift; sourceTree = "<group>"; };
+		18C1482E6C52785A9BD18A31 /* InputDurationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputDurationProvider.swift; sourceTree = "<group>"; };
 		202D1178EBCD29EB012AD48F /* StubCapabilityChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubCapabilityChecker.swift; sourceTree = "<group>"; };
 		2D0C9B6CDC172FE6D0C4CD7F /* AudioConverter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AudioConverter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3229ADB81CC92BFB389C5979 /* FFmpegStartupSelfCheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegStartupSelfCheckTests.swift; sourceTree = "<group>"; };
 		37B429CEAE21270E9073C742 /* FFmpegRunning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegRunning.swift; sourceTree = "<group>"; };
+		398624677030681B22F560F3 /* ConversionCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionCoordinatorTests.swift; sourceTree = "<group>"; };
 		3A7FEA7A43694A9CC7A303AE /* AudioConverterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioConverterTests.swift; sourceTree = "<group>"; };
 		406B902A6EEA4D7AE8C80E98 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		43011DFA389003A2004CE030 /* FileManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileManaging.swift; sourceTree = "<group>"; };
@@ -112,6 +116,7 @@
 		ACAD48F3A8F82B3D03A9917E /* ConversionItemState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversionItemState.swift; sourceTree = "<group>"; };
 		B10AF9EC802A38B185860D58 /* FormatRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatRegistryTests.swift; sourceTree = "<group>"; };
 		B282FF6060474D766F6C9E5C /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
+		B2EBCA19035BA3DE26A99C99 /* ffmpeg */ = {isa = PBXFileReference; path = ffmpeg; sourceTree = "<group>"; };
 		B52ED701BD5D74E20794938F /* FormatValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatValidator.swift; sourceTree = "<group>"; };
 		B562AD5D5B2E53CD1CFACB26 /* MockFFmpegRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockFFmpegRunner.swift; sourceTree = "<group>"; };
 		B7BF1FE6422BB74A64F92656 /* AudioConverterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioConverterApp.swift; sourceTree = "<group>"; };
@@ -166,6 +171,7 @@
 				43011DFA389003A2004CE030 /* FileManaging.swift */,
 				7956DEF9226850A6C387CCED /* FormatRegistry.swift */,
 				B52ED701BD5D74E20794938F /* FormatValidator.swift */,
+				18C1482E6C52785A9BD18A31 /* InputDurationProvider.swift */,
 				E4AC8CD941BB9B4526407CB0 /* OutputPathResolver.swift */,
 			);
 			path = Core;
@@ -185,6 +191,7 @@
 			children = (
 				3A7FEA7A43694A9CC7A303AE /* AudioConverterTests.swift */,
 				5963999B262AF66E82113ACB /* BatchStatusPresenterTests.swift */,
+				398624677030681B22F560F3 /* ConversionCoordinatorTests.swift */,
 				86BA7F50ED21E703429C2DE9 /* ConversionEngineTests.swift */,
 				5018A57B35AE681DFCF1AF6D /* FFmpegCommandBuilderTests.swift */,
 				3229ADB81CC92BFB389C5979 /* FFmpegStartupSelfCheckTests.swift */,
@@ -203,6 +210,7 @@
 			isa = PBXGroup;
 			children = (
 				F9844E8203084104B9AB0197 /* .gitkeep */,
+				B2EBCA19035BA3DE26A99C99 /* ffmpeg */,
 			);
 			path = ffmpeg;
 			sourceTree = "<group>";
@@ -465,6 +473,7 @@
 				0C36937A7B3BAAFAE0F89F81 /* FormatInputView.swift in Sources */,
 				C1EED18824D5112657086E5E /* FormatRegistry.swift in Sources */,
 				CD7A3656F3D80FCEBBD394C3 /* FormatValidator.swift in Sources */,
+				910362374BC0D57436FD0CDB /* InputDurationProvider.swift in Sources */,
 				B27143B441384FAEA1F62F77 /* MainView.swift in Sources */,
 				41DFFF7A434A79C957A80BC9 /* OpenPanelAdapter.swift in Sources */,
 				36E6FA8F20FEAE5FFE64CF77 /* OpenPanelPresenter.swift in Sources */,
@@ -484,6 +493,7 @@
 			files = (
 				064AE0D94A3669B6419BB043 /* AudioConverterTests.swift in Sources */,
 				C8419BE71E6A1BCB4710B3D9 /* BatchStatusPresenterTests.swift in Sources */,
+				F1828CF1D2E0CF878E819DF1 /* ConversionCoordinatorTests.swift in Sources */,
 				5F69B60F65978E3785E0A823 /* ConversionEngineTests.swift in Sources */,
 				D7C187581FCD3ACDB44E860D /* FFmpegCommandBuilderTests.swift in Sources */,
 				8E98AF52D93DB3AF9C578DE5 /* FFmpegStartupSelfCheckTests.swift in Sources */,

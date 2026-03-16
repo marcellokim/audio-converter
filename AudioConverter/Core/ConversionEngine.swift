@@ -1,5 +1,11 @@
 import Foundation
 
+struct ConversionProgress: Equatable {
+    let fractionCompleted: Double?
+    let isIndeterminate: Bool
+    let progressDetail: String
+}
+
 final class ConversionExecutionHandle {
     private let waitForResult: () -> ConversionItemState
     private let cancelImpl: () -> Void
@@ -21,13 +27,16 @@ final class ConversionExecutionHandle {
 struct ConversionEngine {
     private let fileManager: FileManaging
     private let ffmpegRunner: FFmpegRunning
+    private let inputDurationProvider: InputDurationProviding
 
     init(
         fileManager: FileManaging = DefaultFileManagerAdapter(),
-        ffmpegRunner: FFmpegRunning = FFmpegRunner()
+        ffmpegRunner: FFmpegRunning = FFmpegRunner(),
+        inputDurationProvider: InputDurationProviding = InputDurationProvider()
     ) {
         self.fileManager = fileManager
         self.ffmpegRunner = ffmpegRunner
+        self.inputDurationProvider = inputDurationProvider
     }
 
     func makeJob(for file: SelectedAudioFile, format: SupportedFormat) -> Result<ConversionJob, ConversionItemState> {
@@ -52,11 +61,16 @@ struct ConversionEngine {
         }
     }
 
-    func start(job: ConversionJob, ffmpegURL: URL) -> Result<ConversionExecutionHandle, ConversionItemState> {
+    func start(
+        job: ConversionJob,
+        ffmpegURL: URL,
+        onProgress: ((ConversionProgress) -> Void)? = nil
+    ) -> Result<ConversionExecutionHandle, ConversionItemState> {
         guard FileManager.default.isExecutableFile(atPath: ffmpegURL.path) else {
             return .failure(.failed(reason: .ffmpegUnavailable))
         }
 
+        let durationSeconds = inputDurationProvider.durationSeconds(for: job.inputFile.url)
         let arguments = FFmpegCommandBuilder.makeArguments(
             inputURL: job.inputFile.url,
             outputURL: job.temporaryOutputURL,
@@ -65,6 +79,15 @@ struct ConversionEngine {
 
         do {
             let runningTask = try ffmpegRunner.start(ffmpegURL: ffmpegURL, arguments: arguments)
+            if let onProgress {
+                runningTask.setProgressHandler { event in
+                    guard let progress = makeConversionProgress(from: event, durationSeconds: durationSeconds) else {
+                        return
+                    }
+
+                    onProgress(progress)
+                }
+            }
             let handle = ConversionExecutionHandle(
                 waitForResult: {
                     finishRunningTask(
@@ -92,6 +115,39 @@ struct ConversionEngine {
             return state
         }
     }
+}
+
+private func makeConversionProgress(
+    from event: FFmpegProgressEvent,
+    durationSeconds: Double?
+) -> ConversionProgress? {
+    if let durationSeconds, durationSeconds > 0, let outTimeSeconds = event.outTimeSeconds {
+        let fractionCompleted = min(max(outTimeSeconds / durationSeconds, 0), 1)
+        let percentComplete = Int((fractionCompleted * 100).rounded())
+        return ConversionProgress(
+            fractionCompleted: fractionCompleted,
+            isIndeterminate: false,
+            progressDetail: "\(percentComplete)% complete"
+        )
+    }
+
+    if let outTimeSeconds = event.outTimeSeconds {
+        return ConversionProgress(
+            fractionCompleted: nil,
+            isIndeterminate: true,
+            progressDetail: String(format: "Rendered %.1fs so far.", outTimeSeconds)
+        )
+    }
+
+    guard event.progressState == "continue" else {
+        return nil
+    }
+
+    return ConversionProgress(
+        fractionCompleted: nil,
+        isIndeterminate: true,
+        progressDetail: "Rendering with ffmpeg."
+    )
 }
 
 private func finishRunningTask(

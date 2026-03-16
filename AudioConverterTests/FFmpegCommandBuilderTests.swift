@@ -14,7 +14,10 @@ final class FFmpegCommandBuilderTests: XCTestCase {
             outputFormat: format
         )
 
-        XCTAssertEqual(arguments.prefix(5), ["-hide_banner", "-loglevel", "error", "-nostdin", "-n"])
+        XCTAssertEqual(
+            arguments.prefix(8),
+            ["-hide_banner", "-loglevel", "error", "-nostdin", "-nostats", "-progress", "pipe:1", "-n"]
+        )
         XCTAssertEqual(arguments.suffix(6), ["-vn", "-c:a", "libmp3lame", "-q:a", "2", outputURL.path])
         XCTAssertTrue(arguments.contains(inputURL.path))
     }

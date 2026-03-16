@@ -28,7 +28,10 @@ struct BatchStatusListView: View {
                                 .font(.custom("Menlo", size: 10))
                                 .foregroundStyle(color(for: snapshot.state))
                                 .accessibilityIdentifier("batch-state-\(snapshot.fileName)")
-                            Text(snapshot.detail)
+                            if case .running = snapshot.state {
+                                progressView(for: snapshot)
+                            }
+                            Text(snapshot.displayedDetail)
                                 .font(.custom("Menlo", size: 11))
                                 .foregroundStyle(.secondary)
                                 .accessibilityIdentifier("batch-detail-\(snapshot.fileName)")
@@ -39,6 +42,26 @@ struct BatchStatusListView: View {
                     .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func progressView(for snapshot: BatchStatusSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let value = snapshot.fractionCompleted {
+                ProgressView(value: value, total: 1)
+                    .tint(color(for: snapshot.state))
+                    .accessibilityIdentifier("batch-progress-\(snapshot.fileName)")
+            } else {
+                ProgressView()
+                    .tint(color(for: snapshot.state))
+                    .accessibilityIdentifier("batch-progress-\(snapshot.fileName)")
+            }
+
+            Text(snapshot.progressPercentText ?? "LIVE")
+                .font(.custom("Menlo", size: 10))
+                .foregroundStyle(color(for: snapshot.state))
+                .accessibilityIdentifier("batch-progress-label-\(snapshot.fileName)")
         }
     }
 

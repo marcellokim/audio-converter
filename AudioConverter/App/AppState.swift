@@ -5,7 +5,7 @@ protocol BatchConversionSessioning: AnyObject {
     func cancelAll()
 }
 
-extension BatchConversionSession: BatchConversionSessioning {}
+extension ConversionCoordinatorSession: BatchConversionSessioning {}
 
 final class AppState: ObservableObject {
     enum FFmpegResolution {
@@ -87,6 +87,10 @@ final class AppState: ObservableObject {
 
     var canOpenFiles: Bool {
         startupState == .ready && !isConverting
+    }
+
+    var canRemoveSelectedFiles: Bool {
+        !isConverting && !selectedFiles.isEmpty
     }
 
     var canRetryStartupChecks: Bool {
@@ -196,10 +200,23 @@ final class AppState: ObservableObject {
             return
         }
 
-        batchSnapshots = []
+        clearBatchSnapshotsForSelectionMutation()
         selectedFiles = files.map(\.url)
         statusMessage = "Loaded \(files.count) source file(s)."
         refreshStatusMessageForCurrentInputs()
+    }
+
+    func removeSelectedFile(_ file: SelectedAudioFile) {
+        guard canRemoveSelectedFiles else {
+            return
+        }
+
+        guard selectedFiles.contains(file.url) else {
+            return
+        }
+
+        clearBatchSnapshotsForSelectionMutation()
+        selectedFiles.removeAll { $0 == file.url }
     }
 
     func startConversion() {
@@ -396,6 +413,14 @@ final class AppState: ObservableObject {
 
     private static var supportedFormatSummary: String {
         FormatRegistry.allFormats.map(\.id).joined(separator: ", ")
+    }
+
+    private func clearBatchSnapshotsForSelectionMutation() {
+        guard !isConverting, !batchSnapshots.isEmpty else {
+            return
+        }
+
+        batchSnapshots = []
     }
 
     private func performOnMain(_ action: @escaping () -> Void) {

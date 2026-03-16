@@ -13,11 +13,12 @@ struct AudioConverterApp: App {
         WindowGroup {
             MainView()
                 .environmentObject(appState)
-                .frame(minWidth: 720, minHeight: 480)
+                .frame(minWidth: 720, minHeight: 820)
                 .task {
                     appState.performStartupChecksIfNeeded()
                 }
         }
+        .defaultSize(width: 960, height: 920)
         .windowResizability(.contentSize)
     }
 
@@ -89,13 +90,14 @@ struct AudioConverterApp: App {
 
 private final class UITestStartupScenario {
     private enum Mode {
+        case alwaysReady
         case failThenSuccess
         case alwaysFail
     }
 
     static let environmentKey = "AUDIOCONVERTER_UI_TEST_STARTUP_SCENARIO"
     static let launchArgument = "--uitest-startup-scenario"
-    static let supportedValuesDescription = "[fail-then-success | always-fail]"
+    static let supportedValuesDescription = "[always-ready | fail-then-success | always-fail]"
     private static let simulatedFailureMessage = "Simulated startup check failure. Retry to continue."
 
     private let mode: Mode
@@ -109,6 +111,8 @@ private final class UITestStartupScenario {
         }
 
         switch rawValue {
+        case "always-ready":
+            mode = .alwaysReady
         case "fail-then-success":
             mode = .failThenSuccess
         case "always-fail":
@@ -149,6 +153,8 @@ private final class UITestStartupScenario {
         validationAttempts += 1
 
         switch mode {
+        case .alwaysReady:
+            return .ready
         case .failThenSuccess:
             return validationAttempts == 1
                 ? .startupError(Self.simulatedFailureMessage)
@@ -208,6 +214,9 @@ private final class UITestConversionSession: BatchConversionSessioning {
         let id: UUID
         let file: SelectedAudioFile
         var state: ConversionItemState
+        var fractionCompleted: Double?
+        var isIndeterminate: Bool
+        var progressDetail: String?
     }
 
     private let format: SupportedFormat
@@ -235,7 +244,16 @@ private final class UITestConversionSession: BatchConversionSessioning {
         self.onUpdate = onUpdate
         self.onCompletion = onCompletion
         self.files = files
-        items = files.map { Item(id: UUID(), file: $0, state: .queued) }
+        items = files.map {
+            Item(
+                id: UUID(),
+                file: $0,
+                state: .queued,
+                fractionCompleted: nil,
+                isIndeterminate: false,
+                progressDetail: nil
+            )
+        }
     }
 
     func start() {
@@ -270,6 +288,9 @@ private final class UITestConversionSession: BatchConversionSessioning {
             switch updated.state {
             case .queued, .running:
                 updated.state = .cancelled
+                updated.fractionCompleted = nil
+                updated.isIndeterminate = false
+                updated.progressDetail = nil
             case .succeeded, .failed, .skipped, .cancelled:
                 break
             }
@@ -307,7 +328,25 @@ private final class UITestConversionSession: BatchConversionSessioning {
             schedule(after: delay) { [weak self] in
                 self?.publish(state: .running, for: index)
             }
-            delay += 0.35
+            delay += 0.20
+
+            schedule(after: delay) { [weak self] in
+                self?.publishProgress(
+                    fractionCompleted: 0.25,
+                    detail: "25% complete",
+                    for: index
+                )
+            }
+            delay += 0.40
+
+            schedule(after: delay) { [weak self] in
+                self?.publishProgress(
+                    fractionCompleted: 0.75,
+                    detail: "75% complete",
+                    for: index
+                )
+            }
+            delay += 0.60
 
             schedule(after: delay) { [weak self] in
                 guard let self else {
@@ -321,7 +360,7 @@ private final class UITestConversionSession: BatchConversionSessioning {
                     self.finishIfNeeded()
                 }
             }
-            delay += 0.35
+            delay += 0.20
         }
     }
 
@@ -345,6 +384,39 @@ private final class UITestConversionSession: BatchConversionSessioning {
             return
         }
         items[index].state = state
+        switch state {
+        case .running:
+            items[index].fractionCompleted = nil
+            items[index].isIndeterminate = true
+            items[index].progressDetail = nil
+        case .queued:
+            items[index].fractionCompleted = nil
+            items[index].isIndeterminate = false
+            items[index].progressDetail = nil
+        case .succeeded, .failed, .skipped, .cancelled:
+            items[index].fractionCompleted = nil
+            items[index].isIndeterminate = false
+            items[index].progressDetail = nil
+        }
+        snapshotsToPublish = snapshotsLocked()
+        lock.unlock()
+
+        onUpdate(snapshotsToPublish)
+    }
+
+    private func publishProgress(fractionCompleted: Double?, detail: String, for index: Int) {
+        let snapshotsToPublish: [BatchStatusSnapshot]
+
+        lock.lock()
+        guard items.indices.contains(index), !hasCompleted else {
+            lock.unlock()
+            return
+        }
+
+        items[index].state = .running
+        items[index].fractionCompleted = fractionCompleted
+        items[index].isIndeterminate = fractionCompleted == nil
+        items[index].progressDetail = detail
         snapshotsToPublish = snapshotsLocked()
         lock.unlock()
 
@@ -389,7 +461,14 @@ private final class UITestConversionSession: BatchConversionSessioning {
 
     private func snapshotsLocked() -> [BatchStatusSnapshot] {
         items.map { item in
-            BatchStatusSnapshot(id: item.id, fileName: item.file.displayName, state: item.state)
+            BatchStatusSnapshot(
+                id: item.id,
+                fileName: item.file.displayName,
+                state: item.state,
+                fractionCompleted: item.state == .running ? item.fractionCompleted : nil,
+                isIndeterminate: item.state == .running ? item.isIndeterminate : false,
+                progressDetail: item.state == .running ? item.progressDetail : nil
+            )
         }
     }
 

@@ -46,7 +46,10 @@ final class ConversionEngineTests: XCTestCase {
         XCTAssertEqual(fileManager.movedPairs.first?.source, job.temporaryOutputURL)
         XCTAssertEqual(fileManager.movedPairs.first?.destination, job.outputURL)
         XCTAssertTrue(fileManager.removedURLs.isEmpty)
-        XCTAssertEqual(Array(runner.invocations.first?.arguments.prefix(5) ?? []), ["-hide_banner", "-loglevel", "error", "-nostdin", "-n"])
+        XCTAssertEqual(
+            Array(runner.invocations.first?.arguments.prefix(8) ?? []),
+            ["-hide_banner", "-loglevel", "error", "-nostdin", "-nostats", "-progress", "pipe:1", "-n"]
+        )
     }
 
     func testRunCleansUpTemporaryOutputOnNonZeroExit() {
@@ -141,6 +144,76 @@ final class ConversionEngineTests: XCTestCase {
         XCTAssertEqual(fileManager.removedURLs, [job.temporaryOutputURL])
     }
 
+    func testStartPublishesNormalizedProgressWhenDurationIsKnown() {
+        let fileManager = MockFileManager()
+        let runner = MockFFmpegRunner()
+        let durationProvider = StubInputDurationProvider(durationSeconds: 20)
+        let task = MockFFmpegRunner.Task(
+            result: .success(FFmpegRunResult(terminationStatus: 0, standardOutput: "", standardError: ""))
+        )
+        runner.startResults = [.success(task)]
+        let engine = ConversionEngine(
+            fileManager: fileManager,
+            ffmpegRunner: runner,
+            inputDurationProvider: durationProvider
+        )
+        let job = makeJob(outputExtension: "mp3", temporaryName: ".track.partial.mp3")
+        var captured: [ConversionProgress] = []
+
+        let result = engine.start(
+            job: job,
+            ffmpegURL: URL(fileURLWithPath: "/bin/sh"),
+            onProgress: { captured.append($0) }
+        )
+
+        guard case let .success(handle) = result else {
+            return XCTFail("Expected successful execution handle")
+        }
+
+        task.emitProgress(FFmpegProgressEvent(outTimeSeconds: 5, progressState: "continue"))
+        _ = handle.waitForCompletion()
+
+        XCTAssertEqual(
+            captured,
+            [ConversionProgress(fractionCompleted: 0.25, isIndeterminate: false, progressDetail: "25% complete")]
+        )
+    }
+
+    func testStartPublishesIndeterminateProgressWhenDurationIsUnavailable() {
+        let fileManager = MockFileManager()
+        let runner = MockFFmpegRunner()
+        let durationProvider = StubInputDurationProvider(durationSeconds: nil)
+        let task = MockFFmpegRunner.Task(
+            result: .success(FFmpegRunResult(terminationStatus: 0, standardOutput: "", standardError: ""))
+        )
+        runner.startResults = [.success(task)]
+        let engine = ConversionEngine(
+            fileManager: fileManager,
+            ffmpegRunner: runner,
+            inputDurationProvider: durationProvider
+        )
+        let job = makeJob(outputExtension: "mp3", temporaryName: ".track.partial.mp3")
+        var captured: [ConversionProgress] = []
+
+        let result = engine.start(
+            job: job,
+            ffmpegURL: URL(fileURLWithPath: "/bin/sh"),
+            onProgress: { captured.append($0) }
+        )
+
+        guard case let .success(handle) = result else {
+            return XCTFail("Expected successful execution handle")
+        }
+
+        task.emitProgress(FFmpegProgressEvent(outTimeSeconds: 3.5, progressState: "continue"))
+        _ = handle.waitForCompletion()
+
+        XCTAssertEqual(
+            captured,
+            [ConversionProgress(fractionCompleted: nil, isIndeterminate: true, progressDetail: "Rendered 3.5s so far.")]
+        )
+    }
+
     private func makeJob(outputExtension: String, temporaryName: String) -> ConversionJob {
         let inputURL = URL(fileURLWithPath: "/tmp/track.wav")
         let outputURL = URL(fileURLWithPath: "/tmp/track.\(outputExtension)")
@@ -158,5 +231,13 @@ final class ConversionEngineTests: XCTestCase {
             outputURL: outputURL,
             temporaryOutputURL: temporaryOutputURL
         )
+    }
+}
+
+private struct StubInputDurationProvider: InputDurationProviding {
+    let durationSeconds: Double?
+
+    func durationSeconds(for url: URL) -> Double? {
+        durationSeconds
     }
 }

@@ -1,12 +1,15 @@
 import Foundation
 
-final class BatchConversionSession {
+final class ConversionCoordinatorSession {
     typealias SnapshotHandler = ([BatchStatusSnapshot]) -> Void
 
     private struct SessionItem {
         let id: UUID
         let file: SelectedAudioFile
         var state: ConversionItemState
+        var fractionCompleted: Double?
+        var isIndeterminate: Bool
+        var progressDetail: String?
     }
 
     private let engine: ConversionEngine
@@ -38,7 +41,14 @@ final class BatchConversionSession {
         self.onUpdate = onUpdate
         self.onCompletion = onCompletion
         items = files.map {
-            SessionItem(id: UUID(), file: $0, state: .queued)
+            SessionItem(
+                id: UUID(),
+                file: $0,
+                state: .queued,
+                fractionCompleted: nil,
+                isIndeterminate: false,
+                progressDetail: nil
+            )
         }
     }
 
@@ -116,7 +126,13 @@ final class BatchConversionSession {
                 clearActiveIndex(nextIndex)
 
             case let .success(job):
-                switch engine.start(job: job, ffmpegURL: ffmpegURL) {
+                switch engine.start(
+                    job: job,
+                    ffmpegURL: ffmpegURL,
+                    onProgress: { [weak self] progress in
+                        self?.publishProgress(progress, for: nextIndex)
+                    }
+                ) {
                 case let .failure(state):
                     if isCancellationRequested {
                         publishState(.cancelled, for: nextIndex)
@@ -201,7 +217,64 @@ final class BatchConversionSession {
             lock.unlock()
             return
         }
+        let previousState = items[index].state
         items[index].state = state
+        switch state {
+        case .running:
+            if previousState != .running {
+                items[index].fractionCompleted = nil
+                items[index].isIndeterminate = true
+                items[index].progressDetail = nil
+            }
+        case .queued:
+            items[index].fractionCompleted = nil
+            items[index].isIndeterminate = false
+            items[index].progressDetail = nil
+        case .succeeded, .failed, .skipped, .cancelled:
+            items[index].fractionCompleted = nil
+            items[index].isIndeterminate = false
+            items[index].progressDetail = nil
+        }
+        snapshotsToPublish = items.map(makeSnapshot(for:))
+        lock.unlock()
+
+        onUpdate(snapshotsToPublish)
+    }
+
+    private func publishProgress(_ progress: ConversionProgress, for index: Int) {
+        let snapshotsToPublish: [BatchStatusSnapshot]
+
+        lock.lock()
+        guard items.indices.contains(index), !hasCompleted, !cancellationRequested else {
+            lock.unlock()
+            return
+        }
+
+        guard !items[index].state.isTerminal else {
+            lock.unlock()
+            return
+        }
+
+        let nextFractionCompleted: Double?
+        if let existingFraction = items[index].fractionCompleted,
+           let incomingFraction = progress.fractionCompleted {
+            nextFractionCompleted = max(existingFraction, incomingFraction)
+        } else {
+            nextFractionCompleted = progress.fractionCompleted
+        }
+
+        if items[index].state == .running,
+           items[index].fractionCompleted == nextFractionCompleted,
+           items[index].isIndeterminate == progress.isIndeterminate,
+           items[index].progressDetail == progress.progressDetail {
+            lock.unlock()
+            return
+        }
+
+        items[index].state = .running
+        items[index].fractionCompleted = nextFractionCompleted
+        items[index].isIndeterminate = progress.isIndeterminate
+        items[index].progressDetail = progress.progressDetail
         snapshotsToPublish = items.map(makeSnapshot(for:))
         lock.unlock()
 
@@ -224,7 +297,14 @@ final class BatchConversionSession {
     }
 
     private func makeSnapshot(for item: SessionItem) -> BatchStatusSnapshot {
-        BatchStatusSnapshot(id: item.id, fileName: item.file.displayName, state: item.state)
+        BatchStatusSnapshot(
+            id: item.id,
+            fileName: item.file.displayName,
+            state: item.state,
+            fractionCompleted: item.state == .running ? item.fractionCompleted : nil,
+            isIndeterminate: item.state == .running ? item.isIndeterminate : false,
+            progressDetail: item.state == .running ? item.progressDetail : nil
+        )
     }
 }
 
@@ -247,13 +327,13 @@ struct ConversionCoordinator {
         files: [SelectedAudioFile],
         format: SupportedFormat,
         ffmpegURL: URL,
-        onUpdate: @escaping BatchConversionSession.SnapshotHandler = { _ in },
-        onCompletion: @escaping BatchConversionSession.SnapshotHandler = { _ in }
-    ) -> BatchConversionSession {
+        onUpdate: @escaping ConversionCoordinatorSession.SnapshotHandler = { _ in },
+        onCompletion: @escaping ConversionCoordinatorSession.SnapshotHandler = { _ in }
+    ) -> ConversionCoordinatorSession {
         _ = presenter
         _ = maximumConcurrentJobs
 
-        return BatchConversionSession(
+        return ConversionCoordinatorSession(
             files: files,
             format: format,
             ffmpegURL: ffmpegURL,

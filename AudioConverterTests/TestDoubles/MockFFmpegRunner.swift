@@ -11,6 +11,7 @@ final class MockFFmpegRunner: FFmpegRunning {
         private let completionSemaphore = DispatchSemaphore(value: 0)
 
         private var completion: Result<FFmpegRunResult, Error>?
+        private var progressHandler: ((FFmpegProgressEvent) -> Void)?
         private(set) var cancelCount = 0
         var onCancel: (() -> Void)?
 
@@ -39,6 +40,22 @@ final class MockFFmpegRunner: FFmpegRunning {
             lock.unlock()
 
             onCancel?()
+        }
+
+        func setProgressHandler(_ handler: @escaping (FFmpegProgressEvent) -> Void) {
+            lock.lock()
+            progressHandler = handler
+            lock.unlock()
+        }
+
+        func emitProgress(_ event: FFmpegProgressEvent) {
+            let handler: ((FFmpegProgressEvent) -> Void)?
+
+            lock.lock()
+            handler = progressHandler
+            lock.unlock()
+
+            handler?(event)
         }
 
         func complete(with result: Result<FFmpegRunResult, Error>) {
@@ -98,23 +115,12 @@ private final class ImmediateFFmpegTask: FFmpegTaskRunning {
     }
 
     func cancel() {}
+
+    func setProgressHandler(_ handler: @escaping (FFmpegProgressEvent) -> Void) {}
 }
 
 extension FFmpegRunner {
     func run(ffmpegURL: URL, arguments: [String]) throws -> FFmpegRunResult {
         try start(ffmpegURL: ffmpegURL, arguments: arguments).wait()
-    }
-}
-
-extension SpyFFmpegRunner {
-    func start(ffmpegURL: URL, arguments: [String]) throws -> FFmpegTaskRunning {
-        capturedURL = ffmpegURL
-        capturedArguments = arguments
-
-        if let error {
-            throw error
-        }
-
-        return ImmediateFFmpegTask(result: .success(result))
     }
 }

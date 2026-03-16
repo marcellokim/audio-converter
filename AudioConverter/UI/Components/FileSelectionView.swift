@@ -3,7 +3,9 @@ import SwiftUI
 struct FileSelectionView: View {
     let files: [SelectedAudioFile]
     let action: () -> Void
-    let isEnabled: Bool
+    let onRemove: (SelectedAudioFile) -> Void
+    let canBrowseFiles: Bool
+    let canRemoveFiles: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -18,7 +20,8 @@ struct FileSelectionView: View {
                 Spacer()
                 Button("Select Files", action: action)
                     .buttonStyle(.borderedProminent)
-                    .disabled(!isEnabled)
+                    .disabled(!canBrowseFiles)
+                    .accessibilityIdentifier("select-files")
             }
 
             Text(helperText)
@@ -50,6 +53,16 @@ struct FileSelectionView: View {
                                     .lineLimit(1)
                             }
                             Spacer()
+                            if canRemoveFiles {
+                                Button(role: .destructive) {
+                                    onRemove(file)
+                                } label: {
+                                    Label("Remove", systemImage: "xmark.circle.fill")
+                                        .labelStyle(.titleAndIcon)
+                                }
+                                .buttonStyle(.borderless)
+                                .accessibilityIdentifier("remove-staged-file-\(file.displayName)")
+                            }
                         }
                         .padding(14)
                         .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -60,7 +73,7 @@ struct FileSelectionView: View {
     }
 
     private var helperText: String {
-        if !isEnabled && files.isEmpty {
+        if !canBrowseFiles && files.isEmpty {
             return "File browsing unlocks once the bundled ffmpeg startup check succeeds."
         }
 

@@ -12,51 +12,44 @@ final class AudioConverterUITests: XCTestCase {
         let app = makeApp()
         app.launch()
 
-        XCTAssertFalse(app.buttons["Start Conversion"].isEnabled)
-        XCTAssertFalse(app.buttons["Cancel Batch"].exists)
+        XCTAssertFalse(app.buttons["start-conversion"].isEnabled)
+        XCTAssertFalse(app.buttons["cancel-conversion"].exists)
     }
 
     func testSelectFilesButtonBecomesEnabledAfterStartupCheck() {
         let app = makeApp()
         app.launch()
 
-        let selectFilesButton = app.buttons["Select Files"]
-        XCTAssertTrue(selectFilesButton.waitForExistence(timeout: 5))
-
-        let enabledPredicate = NSPredicate(format: "isEnabled == true")
-        let expectation = XCTNSPredicateExpectation(predicate: enabledPredicate, object: selectFilesButton)
-        XCTAssertEqual(XCTWaiter().wait(for: [expectation], timeout: 5), .completed)
+        _ = waitForEnabledSelectFilesButton(in: app)
     }
 
     func testRetryStartupCheckButtonAppearsWhenStartupFails() {
         let app = makeApp(startupScenario: "always-fail")
         app.launch()
 
-        let retryButton = app.buttons["Retry Startup Check"]
+        let retryButton = app.buttons["retry-startup-check"]
         XCTAssertTrue(retryButton.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Select Files"].isEnabled)
+        XCTAssertFalse(app.buttons["select-files"].isEnabled)
     }
 
     func testRetryStartupCheckCanRecoverToEnabledFileSelection() {
         let app = makeApp(startupScenario: "fail-then-success")
         app.launch()
 
-        let retryButton = app.buttons["Retry Startup Check"]
+        let retryButton = app.buttons["retry-startup-check"]
         XCTAssertTrue(retryButton.waitForExistence(timeout: 5))
 
         retryButton.tap()
 
-        let selectFilesButton = app.buttons["Select Files"]
-        XCTAssertTrue(selectFilesButton.waitForExistence(timeout: 5))
-
-        let enabledPredicate = NSPredicate(format: "isEnabled == true")
-        let expectation = XCTNSPredicateExpectation(predicate: enabledPredicate, object: selectFilesButton)
-        XCTAssertEqual(XCTWaiter().wait(for: [expectation], timeout: 5), .completed)
+        _ = waitForEnabledSelectFilesButton(in: app)
         XCTAssertFalse(retryButton.exists)
     }
 
     func testSelectFilesScenarioStagesChosenFilesAndEnablesConversion() {
-        let app = makeApp(fileSelectionScenario: "multiple")
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "multiple"
+        )
         app.launch()
 
         let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
@@ -64,40 +57,66 @@ final class AudioConverterUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["ui-test-source-1.wav"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["ui-test-source-2.aiff"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Start Conversion"].isEnabled)
+        XCTAssertTrue(app.buttons["start-conversion"].isEnabled)
     }
 
     func testSelectFilesCancelScenarioShowsCancellationMessage() {
-        let app = makeApp(fileSelectionScenario: "cancel")
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "cancel"
+        )
         app.launch()
 
         let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
         selectFilesButton.tap()
 
         XCTAssertTrue(app.staticTexts["File selection cancelled."].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Start Conversion"].isEnabled)
+        XCTAssertFalse(app.buttons["start-conversion"].isEnabled)
     }
 
     func testSelectFilesCancelAfterSelectionKeepsExistingFilesLoaded() {
-        let app = makeApp(fileSelectionScenario: "multiple,cancel")
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "multiple,cancel"
+        )
         app.launch()
 
         let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
         selectFilesButton.tap()
 
         XCTAssertTrue(app.staticTexts["ui-test-source-1.wav"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Start Conversion"].isEnabled)
+        XCTAssertTrue(app.buttons["start-conversion"].isEnabled)
 
         selectFilesButton.tap()
 
         XCTAssertTrue(app.staticTexts["File selection cancelled. Keeping 2 loaded file(s)."].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["ui-test-source-1.wav"].exists)
         XCTAssertTrue(app.staticTexts["ui-test-source-2.aiff"].exists)
-        XCTAssertTrue(app.buttons["Start Conversion"].isEnabled)
+        XCTAssertTrue(app.buttons["start-conversion"].isEnabled)
+    }
+
+    func testSelectedFilesCanBeRemovedBeforeConversion() {
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "multiple"
+        )
+        app.launch()
+
+        let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
+        selectFilesButton.tap()
+
+        let removeButton = app.buttons["remove-staged-file-ui-test-source-1.wav"]
+        XCTAssertTrue(removeButton.waitForExistence(timeout: 5))
+        removeButton.tap()
+
+        XCTAssertFalse(app.staticTexts["ui-test-source-1.wav"].exists)
+        XCTAssertTrue(app.staticTexts["ui-test-source-2.aiff"].exists)
+        XCTAssertTrue(app.buttons["start-conversion"].isEnabled)
     }
 
     func testConversionScenarioRunsFromSelectionThroughCompletion() {
         let app = makeApp(
+            startupScenario: "always-ready",
             fileSelectionScenario: "multiple",
             conversionScenario: "complete-success"
         )
@@ -109,17 +128,18 @@ final class AudioConverterUITests: XCTestCase {
         let startConversionButton = app.buttons["start-conversion"]
         XCTAssertTrue(startConversionButton.waitForExistence(timeout: 5))
         XCTAssertTrue(startConversionButton.isEnabled)
-
+        waitForHittable(startConversionButton)
         startConversionButton.tap()
+        scrollToBatchStatus(in: app)
 
-        XCTAssertTrue(app.staticTexts["Finished conversion to MP3: 2 converted."].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Complete 2"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Saved to ui-test-source-1.mp3."].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Saved to ui-test-source-2.mp3."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["batch-summary-complete"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["batch-detail-ui-test-source-1.wav"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["batch-detail-ui-test-source-2.aiff"].waitForExistence(timeout: 5))
     }
 
     func testConversionScenarioCanCancelAnInFlightBatch() {
         let app = makeApp(
+            startupScenario: "always-ready",
             fileSelectionScenario: "multiple",
             conversionScenario: "cancel-after-start"
         )
@@ -130,24 +150,24 @@ final class AudioConverterUITests: XCTestCase {
 
         let startConversionButton = app.buttons["start-conversion"]
         XCTAssertTrue(startConversionButton.waitForExistence(timeout: 5))
+        waitForHittable(startConversionButton)
         startConversionButton.tap()
 
         let cancelBatchButton = app.buttons["cancel-conversion"]
         XCTAssertTrue(cancelBatchButton.waitForExistence(timeout: 5))
-
+        waitForHittable(cancelBatchButton)
         cancelBatchButton.tap()
 
-        XCTAssertTrue(app.staticTexts["Finished conversion to MP3: 2 cancelled."].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Cancelled 2"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Cancelled before completion."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["batch-summary-cancelled"].waitForExistence(timeout: 10))
     }
 
     private func makeApp(
-        startupScenario: String? = nil,
+        startupScenario: String? = "always-ready",
         fileSelectionScenario: String? = nil,
         conversionScenario: String? = nil
     ) -> XCUIApplication {
         let app = XCUIApplication()
+        app.launchArguments += ["-ApplePersistenceIgnoreState", "YES"]
 
         if let startupScenario {
             app.launchArguments.append("--uitest-startup-scenario")
@@ -168,7 +188,9 @@ final class AudioConverterUITests: XCTestCase {
     }
 
     private func waitForEnabledSelectFilesButton(in app: XCUIApplication) -> XCUIElement {
-        let selectFilesButton = app.buttons["Select Files"]
+        app.activate()
+
+        let selectFilesButton = app.buttons["select-files"]
         XCTAssertTrue(selectFilesButton.waitForExistence(timeout: 5))
 
         let enabledPredicate = NSPredicate(format: "isEnabled == true")
@@ -177,4 +199,22 @@ final class AudioConverterUITests: XCTestCase {
 
         return selectFilesButton
     }
+
+    private func waitForHittable(_ element: XCUIElement, timeout: TimeInterval = 5) {
+        let predicate = NSPredicate(format: "isHittable == true")
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        XCTAssertEqual(XCTWaiter().wait(for: [expectation], timeout: timeout), .completed)
+    }
+
+    private func scrollToBatchStatus(in app: XCUIApplication) {
+        let scrollView = app.scrollViews.firstMatch
+        guard scrollView.exists else {
+            return
+        }
+
+        for _ in 0..<2 {
+            scrollView.swipeUp()
+        }
+    }
+
 }

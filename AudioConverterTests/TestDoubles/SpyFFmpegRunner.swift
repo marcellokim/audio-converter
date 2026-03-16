@@ -17,4 +17,31 @@ final class SpyFFmpegRunner: FFmpegRunning {
 
         return result
     }
+
+    func start(ffmpegURL: URL, arguments: [String]) throws -> FFmpegTaskRunning {
+        capturedURL = ffmpegURL
+        capturedArguments = arguments
+
+        if let error {
+            throw error
+        }
+
+        return ImmediateSpyFFmpegTask(result: .success(result))
+    }
+}
+
+private final class ImmediateSpyFFmpegTask: FFmpegTaskRunning {
+    private let result: Result<FFmpegRunResult, Error>
+
+    init(result: Result<FFmpegRunResult, Error>) {
+        self.result = result
+    }
+
+    func wait() throws -> FFmpegRunResult {
+        try result.get()
+    }
+
+    func cancel() {}
+
+    func setProgressHandler(_ handler: @escaping (FFmpegProgressEvent) -> Void) {}
 }
