@@ -72,6 +72,6 @@ The current vendored artifact is FFmpeg `8.0.1` for macOS `arm64`, built locally
 - Release packaging still needs the matching FFmpeg/LGPL notices and third-party codec-library provenance before distribution. See `docs/ffmpeg-licensing.md`.
 
 ## Next implementation milestones
-- finish release automation for nested executable signing and notarization
 - package the final FFmpeg/LGPL + external-library notice bundle for distribution
+- finish release automation for nested executable signing and notarization
 - expand deterministic UI automation from file-selection/startup flows into end-to-end conversion-completion coverage
