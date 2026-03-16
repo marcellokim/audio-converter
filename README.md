@@ -12,7 +12,7 @@ This repository now contains:
 - format registry, startup self-check, and conversion core files
 - distribution, provenance, and licensing notes in `docs/`
 
-The conversion core is now verified against the vendored FFmpeg binary, and it now includes a serial batch-session seam with stable per-file snapshot IDs, `queued -> running -> succeeded/skipped/failed/cancelled` state transitions, batch-wide cancel handling, and temp-file cleanup for cancelled work. The current SwiftUI shell continues to run a launch-time ffmpeg self-check, expose an in-app retry path for startup failures, open the real macOS file picker, and drive conversions through reusable status/file-selection/format/batch components.
+The conversion core is now verified against the vendored FFmpeg binary, and it now includes a serial batch-session seam with stable per-file snapshot IDs, `queued -> running -> succeeded/skipped/failed/cancelled` state transitions, batch-wide cancel handling, and temp-file cleanup for cancelled work. The current SwiftUI shell continues to run a launch-time ffmpeg self-check, expose an in-app retry path for startup failures, open the real macOS file picker, drive conversions through reusable status/file-selection/format/batch components, and ship DEBUG-only deterministic UI-test hooks around the file-selection seam so UI automation does not depend on a human-operated `NSOpenPanel`.
 
 ## Project structure
 - `project.yml`: XcodeGen project definition
@@ -72,7 +72,6 @@ The current vendored artifact is FFmpeg `8.0.1` for macOS `arm64`, built locally
 - Release packaging still needs the matching FFmpeg/LGPL notices and third-party codec-library provenance before distribution. See `docs/ffmpeg-licensing.md`.
 
 ## Next implementation milestones
-- finish wiring the new session-driven live per-file state transitions and batch-wide cancel flow through `AppState` and the SwiftUI controls
-- harden UI automation around the real macOS open-panel interaction
 - finish release automation for nested executable signing and notarization
 - package the final FFmpeg/LGPL + external-library notice bundle for distribution
+- expand deterministic UI automation from file-selection/startup flows into end-to-end conversion-completion coverage

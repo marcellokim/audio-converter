@@ -125,6 +125,45 @@ final class AudioConverterTests: XCTestCase {
         XCTAssertFalse(state.canStartConversion)
     }
 
+    func testSelectFilesLoadsChosenFilesAndEnablesConversion() {
+        let chosenFiles = [
+            SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/voice-note.wav")),
+            SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/session.aiff"))
+        ]
+        let state = makeReadyAppState(selectAudioFiles: { chosenFiles })
+
+        state.selectFiles()
+
+        XCTAssertEqual(state.selectedFiles, chosenFiles.map(\.url))
+        XCTAssertEqual(state.statusMessage, "Ready to convert 2 file(s) to MP3.")
+        XCTAssertTrue(state.canStartConversion)
+    }
+
+    func testSelectFilesReportsCancellationWhenPickerReturnsNoFiles() {
+        let state = makeReadyAppState(selectAudioFiles: { [] })
+
+        state.selectFiles()
+
+        XCTAssertTrue(state.selectedFiles.isEmpty)
+        XCTAssertEqual(state.statusMessage, "File selection cancelled.")
+        XCTAssertFalse(state.canStartConversion)
+    }
+
+    func testSelectFilesCancellationKeepsExistingSelectionLoaded() {
+        let chosenFiles = [
+            SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/voice-note.wav"))
+        ]
+        var responses = [chosenFiles, []]
+        let state = makeReadyAppState(selectAudioFiles: { responses.removeFirst() })
+
+        state.selectFiles()
+        state.selectFiles()
+
+        XCTAssertEqual(state.selectedFiles, chosenFiles.map(\.url))
+        XCTAssertEqual(state.statusMessage, "File selection cancelled. Keeping 1 loaded file(s).")
+        XCTAssertTrue(state.canStartConversion)
+    }
+
     func testStartConversionConsumesLiveSessionUpdatesBeforeCompletion() {
         let session = ControlledConversionSession()
         let state = makeReadyAppState(session: session)
@@ -188,11 +227,15 @@ final class AudioConverterTests: XCTestCase {
         XCTAssertEqual(state.statusMessage, "Finished conversion to MP3: 1 cancelled.")
     }
 
-    private func makeReadyAppState(session: ControlledConversionSession? = nil) -> AppState {
+    private func makeReadyAppState(
+        session: ControlledConversionSession? = nil,
+        selectAudioFiles: @escaping AppState.FileSelector = { [] }
+    ) -> AppState {
         let controlledSession = session ?? ControlledConversionSession()
         let state = AppState(
             resolveFFmpegURL: { .ready(URL(fileURLWithPath: "/bin/sh")) },
             validateStartupCapabilities: { _ in .ready },
+            selectAudioFiles: selectAudioFiles,
             makeConversionSession: { _, _, _, onUpdate, onCompletion in
                 controlledSession.onUpdate = onUpdate
                 controlledSession.onCompletion = onCompletion

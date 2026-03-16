@@ -23,14 +23,42 @@ struct AudioConverterApp: App {
 
     private static func makeAppState(processInfo: ProcessInfo = .processInfo) -> AppState {
 #if DEBUG
-        guard let startupScenario = UITestStartupScenario(
+        let startupScenario = UITestStartupScenario(
             arguments: processInfo.arguments,
             environment: processInfo.environment
-        ) else {
+        )
+        let fileSelectionScenario = UITestFileSelectionScenario(
+            arguments: processInfo.arguments,
+            environment: processInfo.environment
+        )
+
+        if processInfo.arguments.contains(UITestStartupScenario.launchArgument),
+           startupScenario == nil {
+            fatalError(
+                "Invalid UI test startup scenario. Set \(UITestStartupScenario.environmentKey) to \(UITestStartupScenario.supportedValuesDescription)."
+            )
+        }
+
+        if processInfo.arguments.contains(UITestFileSelectionScenario.launchArgument),
+           fileSelectionScenario == nil {
+            fatalError(
+                "Invalid UI test file-selection scenario. Set \(UITestFileSelectionScenario.environmentKey) to a comma-separated list using \(UITestFileSelectionScenario.supportedValuesDescription)."
+            )
+        }
+
+        guard startupScenario != nil || fileSelectionScenario != nil else {
             return AppState()
         }
 
-        return startupScenario.makeAppState()
+        let selectAudioFiles = fileSelectionScenario?.makeFileSelector() ?? {
+            OpenPanelPresenter().selectFiles()
+        }
+
+        if let startupScenario {
+            return startupScenario.makeAppState(selectAudioFiles: selectAudioFiles)
+        }
+
+        return AppState(selectAudioFiles: selectAudioFiles)
 #else
         return AppState()
 #endif
@@ -43,8 +71,9 @@ private final class UITestStartupScenario {
         case alwaysFail
     }
 
-    private static let environmentKey = "AUDIOCONVERTER_UI_TEST_STARTUP_SCENARIO"
-    private static let launchArgument = "--uitest-startup-scenario"
+    static let environmentKey = "AUDIOCONVERTER_UI_TEST_STARTUP_SCENARIO"
+    static let launchArgument = "--uitest-startup-scenario"
+    static let supportedValuesDescription = "[fail-then-success | always-fail]"
     private static let simulatedFailureMessage = "Simulated startup check failure. Retry to continue."
 
     private let mode: Mode
@@ -67,13 +96,14 @@ private final class UITestStartupScenario {
         }
     }
 
-    func makeAppState() -> AppState {
+    func makeAppState(selectAudioFiles: @escaping AppState.FileSelector = { OpenPanelPresenter().selectFiles() }) -> AppState {
         let fallbackURL = URL(fileURLWithPath: "/bin/sh")
         let ffmpegURL = FFmpegBinaryResolver.bundledBinaryURL() ?? fallbackURL
 
         return AppState(
             resolveFFmpegURL: { .ready(ffmpegURL) },
-            validateStartupCapabilities: { [self] _ in nextValidationResult() }
+            validateStartupCapabilities: { [self] _ in nextValidationResult() },
+            selectAudioFiles: selectAudioFiles
         )
     }
 
@@ -90,6 +120,75 @@ private final class UITestStartupScenario {
                 : .ready
         case .alwaysFail:
             return .startupError(Self.simulatedFailureMessage)
+        }
+    }
+}
+
+private final class UITestFileSelectionScenario {
+    private enum Step {
+        case cancel
+        case selected([SelectedAudioFile])
+    }
+
+    static let environmentKey = "AUDIOCONVERTER_UI_TEST_FILE_SELECTION_SCENARIO"
+    static let launchArgument = "--uitest-file-selection-scenario"
+    static let supportedValuesDescription = "[single | multiple | cancel]"
+
+    private let lock = NSLock()
+    private var steps: [Step]
+
+    init?(arguments: [String], environment: [String: String]) {
+        guard arguments.contains(Self.launchArgument),
+              let rawValue = environment[Self.environmentKey] else {
+            return nil
+        }
+
+        let tokens = rawValue.split(separator: ",").map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+        let parsedSteps = tokens.compactMap(Self.parseStep)
+
+        guard !tokens.isEmpty, parsedSteps.count == tokens.count else {
+            return nil
+        }
+
+        steps = parsedSteps
+    }
+
+    func makeFileSelector() -> AppState.FileSelector {
+        { [self] in
+            nextSelectionResult()
+        }
+    }
+
+    private func nextSelectionResult() -> [SelectedAudioFile] {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let nextStep = steps.isEmpty ? .cancel : steps.removeFirst()
+        switch nextStep {
+        case .cancel:
+            return []
+        case let .selected(files):
+            return files
+        }
+    }
+
+    private static func parseStep(_ token: String) -> Step? {
+        switch token {
+        case "cancel":
+            return .cancel
+        case "single":
+            return .selected([
+                SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/ui-test-source-1.wav"))
+            ])
+        case "multiple":
+            return .selected([
+                SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/ui-test-source-1.wav")),
+                SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/ui-test-source-2.aiff"))
+            ])
+        default:
+            return nil
         }
     }
 }
