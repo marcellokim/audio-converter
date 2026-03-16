@@ -10,7 +10,7 @@ This repository now contains:
 - a vendored macOS `arm64` FFmpeg binary in `AudioConverter/Resources/ffmpeg/ffmpeg`
 - FFmpeg embed build script in `scripts/embed-ffmpeg.sh`
 - format registry, startup self-check, and conversion core files
-- distribution, provenance, and licensing notes in `docs/`
+- distribution, provenance, licensing, and notice-bundle notes in `docs/`
 
 The conversion core is now verified against the vendored FFmpeg binary, and it now includes a serial batch-session seam with stable per-file snapshot IDs, `queued -> running -> succeeded/skipped/failed/cancelled` state transitions, batch-wide cancel handling, and temp-file cleanup for cancelled work. The current SwiftUI shell continues to run a launch-time ffmpeg self-check, expose an in-app retry path for startup failures, open the real macOS file picker, drive conversions through reusable status/file-selection/format/batch components, and ship DEBUG-only deterministic UI-test hooks around the file-selection seam so UI automation does not depend on a human-operated `NSOpenPanel`.
 
@@ -23,8 +23,10 @@ The conversion core is now verified against the vendored FFmpeg binary, and it n
 - `AudioConverterTests`: unit tests
 - `AudioConverterUITests`: UI smoke test
 - `scripts/embed-ffmpeg.sh`: copies vendored FFmpeg into the app bundle
+- `scripts/package-notice-bundle.sh`: stages the canonical `ThirdPartyNotices/` release packet
 - `docs/distribution-signing.md`: signing and notarization notes
 - `docs/ffmpeg-provenance.md`: current FFmpeg development reference
+- `docs/notice-bundle/`: source-of-truth notice bundle assets
 
 ## Supported output formats in the current registry
 - `mp3`
@@ -64,12 +66,13 @@ The build script embeds the vendored binary from:
 AudioConverter/Resources/ffmpeg/ffmpeg
 ```
 
-The current vendored artifact is FFmpeg `8.0.1` for macOS `arm64`, built locally from the official FFmpeg source tarball. See `docs/ffmpeg-provenance.md` for the exact source URL, checksums, and linked codec-library provenance.
+The current vendored artifact is FFmpeg `8.0.1` for macOS `arm64`, built locally from the official FFmpeg source tarball. See `docs/ffmpeg-provenance.md` for the exact source URL, checksums, linked codec-library provenance, and the matching `ThirdPartyNotices/` bundle inputs.
 
 ## Current release caveat
 - The vendored FFmpeg artifact is operationally present and verified for local conversion tests.
 - The old GPL-policy blocker is resolved for the current vendored build: its recorded build configuration omits `--enable-gpl` / `--enable-nonfree`, and `ffmpeg -L` reports LGPL `2.1 or later`.
-- Release packaging still needs the matching FFmpeg/LGPL notices and third-party codec-library provenance before distribution. See `docs/ffmpeg-licensing.md`.
+- The matching FFmpeg/LGPL + external-library notice bundle is now source-controlled under `docs/notice-bundle/` and staged with `scripts/package-notice-bundle.sh`.
+- Remaining release work is downstream packaging/signing/notarization automation for the final distributable.
 
 ## Next implementation milestones
 - package the final FFmpeg/LGPL + external-library notice bundle for distribution

@@ -23,12 +23,15 @@ struct BatchStatusListView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(snapshot.fileName)
                                 .font(.custom("Hoefler Text", size: 20))
+                                .accessibilityIdentifier("batch-file-\(snapshot.fileName)")
                             Text(snapshot.state.label.uppercased())
                                 .font(.custom("Menlo", size: 10))
                                 .foregroundStyle(color(for: snapshot.state))
+                                .accessibilityIdentifier("batch-state-\(snapshot.fileName)")
                             Text(snapshot.detail)
                                 .font(.custom("Menlo", size: 11))
                                 .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("batch-detail-\(snapshot.fileName)")
                         }
                         Spacer()
                     }
@@ -97,6 +100,7 @@ struct BatchStatusListView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(item.color.opacity(0.10), in: Capsule())
+                    .accessibilityIdentifier("batch-summary-\(item.label.lowercased())")
             }
         }
     }

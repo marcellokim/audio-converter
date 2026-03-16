@@ -31,11 +31,13 @@ struct MainView: View {
                         Button("Start Conversion", action: handleStartConversion)
                             .buttonStyle(.borderedProminent)
                             .disabled(!canStartConversion)
+                            .accessibilityIdentifier("start-conversion")
 
                         if appState.isConverting {
                             Button(appState.isCancelling ? "Cancelling Batch…" : "Cancel Batch", action: handleCancelConversion)
                                 .buttonStyle(.bordered)
                                 .disabled(!appState.canCancelConversion)
+                                .accessibilityIdentifier("cancel-conversion")
                         }
 
                         if appState.canRetryStartupChecks {
@@ -57,6 +59,7 @@ struct MainView: View {
                     Text(appState.statusMessage)
                         .font(.custom("Menlo", size: 11))
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("status-message")
                 }
 
                 BatchStatusListView(snapshots: appState.batchSnapshots)

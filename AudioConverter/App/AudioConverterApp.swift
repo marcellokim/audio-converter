@@ -31,6 +31,10 @@ struct AudioConverterApp: App {
             arguments: processInfo.arguments,
             environment: processInfo.environment
         )
+        let conversionScenario = UITestConversionScenario(
+            arguments: processInfo.arguments,
+            environment: processInfo.environment
+        )
 
         if processInfo.arguments.contains(UITestStartupScenario.launchArgument),
            startupScenario == nil {
@@ -46,16 +50,34 @@ struct AudioConverterApp: App {
             )
         }
 
-        guard startupScenario != nil || fileSelectionScenario != nil else {
+        if processInfo.arguments.contains(UITestConversionScenario.launchArgument),
+           conversionScenario == nil {
+            fatalError(
+                "Invalid UI test conversion scenario. Set \(UITestConversionScenario.environmentKey) to \(UITestConversionScenario.supportedValuesDescription)."
+            )
+        }
+
+        guard startupScenario != nil || fileSelectionScenario != nil || conversionScenario != nil else {
             return AppState()
         }
 
         let selectAudioFiles = fileSelectionScenario?.makeFileSelector() ?? {
             OpenPanelPresenter().selectFiles()
         }
+        let makeConversionSession = conversionScenario?.makeConversionSessionFactory()
 
         if let startupScenario {
-            return startupScenario.makeAppState(selectAudioFiles: selectAudioFiles)
+            return startupScenario.makeAppState(
+                selectAudioFiles: selectAudioFiles,
+                makeConversionSession: makeConversionSession
+            )
+        }
+
+        if let makeConversionSession {
+            return AppState(
+                selectAudioFiles: selectAudioFiles,
+                makeConversionSession: makeConversionSession
+            )
         }
 
         return AppState(selectAudioFiles: selectAudioFiles)
@@ -96,14 +118,27 @@ private final class UITestStartupScenario {
         }
     }
 
-    func makeAppState(selectAudioFiles: @escaping AppState.FileSelector = { OpenPanelPresenter().selectFiles() }) -> AppState {
+    func makeAppState(
+        selectAudioFiles: @escaping AppState.FileSelector = { OpenPanelPresenter().selectFiles() },
+        makeConversionSession: AppState.ConversionSessionFactory? = nil
+    ) -> AppState {
         let fallbackURL = URL(fileURLWithPath: "/bin/sh")
         let ffmpegURL = FFmpegBinaryResolver.bundledBinaryURL() ?? fallbackURL
+        let conversionSessionFactory = makeConversionSession ?? { files, format, ffmpegURL, onUpdate, onCompletion in
+            ConversionCoordinator().makeSession(
+                files: files,
+                format: format,
+                ffmpegURL: ffmpegURL,
+                onUpdate: onUpdate,
+                onCompletion: onCompletion
+            )
+        }
 
         return AppState(
             resolveFFmpegURL: { .ready(ffmpegURL) },
             validateStartupCapabilities: { [self] _ in nextValidationResult() },
-            selectAudioFiles: selectAudioFiles
+            selectAudioFiles: selectAudioFiles,
+            makeConversionSession: conversionSessionFactory
         )
     }
 
@@ -121,6 +156,247 @@ private final class UITestStartupScenario {
         case .alwaysFail:
             return .startupError(Self.simulatedFailureMessage)
         }
+    }
+}
+
+private enum UITestConversionMode {
+    case completeSuccess
+    case cancelAfterStart
+}
+
+private final class UITestConversionScenario {
+
+    static let environmentKey = "AUDIOCONVERTER_UI_TEST_CONVERSION_SCENARIO"
+    static let launchArgument = "--uitest-conversion-scenario"
+    static let supportedValuesDescription = "[complete-success | cancel-after-start]"
+
+    private let mode: UITestConversionMode
+
+    init?(arguments: [String], environment: [String: String]) {
+        guard arguments.contains(Self.launchArgument),
+              let rawValue = environment[Self.environmentKey] else {
+            return nil
+        }
+
+        switch rawValue {
+        case "complete-success":
+            mode = .completeSuccess
+        case "cancel-after-start":
+            mode = .cancelAfterStart
+        default:
+            return nil
+        }
+    }
+
+    func makeConversionSessionFactory() -> AppState.ConversionSessionFactory {
+        { [mode] files, format, _, onUpdate, onCompletion in
+            UITestConversionSession(
+                files: files,
+                format: format,
+                mode: mode,
+                onUpdate: onUpdate,
+                onCompletion: onCompletion
+            )
+        }
+    }
+}
+
+private final class UITestConversionSession: BatchConversionSessioning {
+    typealias SnapshotHandler = ([BatchStatusSnapshot]) -> Void
+
+    private struct Item {
+        let id: UUID
+        let file: SelectedAudioFile
+        var state: ConversionItemState
+    }
+
+    private let format: SupportedFormat
+    private let mode: UITestConversionMode
+    private let onUpdate: SnapshotHandler
+    private let onCompletion: SnapshotHandler
+    private let files: [SelectedAudioFile]
+    private let lock = NSLock()
+
+    private var items: [Item]
+    private var scheduledWorkItems: [DispatchWorkItem] = []
+    private var hasStarted = false
+    private var hasCompleted = false
+    private var cancellationRequested = false
+
+    init(
+        files: [SelectedAudioFile],
+        format: SupportedFormat,
+        mode: UITestConversionMode,
+        onUpdate: @escaping SnapshotHandler,
+        onCompletion: @escaping SnapshotHandler
+    ) {
+        self.format = format
+        self.mode = mode
+        self.onUpdate = onUpdate
+        self.onCompletion = onCompletion
+        self.files = files
+        items = files.map { Item(id: UUID(), file: $0, state: .queued) }
+    }
+
+    func start() {
+        let initialSnapshots: [BatchStatusSnapshot]
+
+        lock.lock()
+        guard !hasStarted else {
+            lock.unlock()
+            return
+        }
+        hasStarted = true
+        initialSnapshots = snapshotsLocked()
+        lock.unlock()
+
+        onUpdate(initialSnapshots)
+        scheduleScenario()
+    }
+
+    func cancelAll() {
+        let snapshotsToPublish: [BatchStatusSnapshot]
+        let workItemsToCancel: [DispatchWorkItem]
+
+        lock.lock()
+        guard hasStarted, !hasCompleted, !cancellationRequested else {
+            lock.unlock()
+            return
+        }
+
+        cancellationRequested = true
+        items = items.map { item in
+            var updated = item
+            switch updated.state {
+            case .queued, .running:
+                updated.state = .cancelled
+            case .succeeded, .failed, .skipped, .cancelled:
+                break
+            }
+            return updated
+        }
+        workItemsToCancel = scheduledWorkItems
+        scheduledWorkItems.removeAll()
+        snapshotsToPublish = snapshotsLocked()
+        hasCompleted = true
+        lock.unlock()
+
+        workItemsToCancel.forEach { $0.cancel() }
+        onUpdate(snapshotsToPublish)
+        onCompletion(snapshotsToPublish)
+    }
+
+    private func scheduleScenario() {
+        switch mode {
+        case .completeSuccess:
+            scheduleSuccessfulCompletionScenario()
+        case .cancelAfterStart:
+            scheduleCancelableScenario()
+        }
+    }
+
+    private func scheduleSuccessfulCompletionScenario() {
+        guard !files.isEmpty else {
+            finishIfNeeded()
+            return
+        }
+
+        var delay: TimeInterval = 0.20
+
+        for (index, file) in files.enumerated() {
+            schedule(after: delay) { [weak self] in
+                self?.publish(state: .running, for: index)
+            }
+            delay += 0.35
+
+            schedule(after: delay) { [weak self] in
+                guard let self else {
+                    return
+                }
+
+                let outputURL = self.makeOutputURL(for: file)
+                self.publish(state: .succeeded(outputURL: outputURL), for: index)
+
+                if index == self.files.indices.last {
+                    self.finishIfNeeded()
+                }
+            }
+            delay += 0.35
+        }
+    }
+
+    private func scheduleCancelableScenario() {
+        guard !files.isEmpty else {
+            finishIfNeeded()
+            return
+        }
+
+        schedule(after: 0.20) { [weak self] in
+            self?.publish(state: .running, for: 0)
+        }
+    }
+
+    private func publish(state: ConversionItemState, for index: Int) {
+        let snapshotsToPublish: [BatchStatusSnapshot]
+
+        lock.lock()
+        guard items.indices.contains(index), !hasCompleted else {
+            lock.unlock()
+            return
+        }
+        items[index].state = state
+        snapshotsToPublish = snapshotsLocked()
+        lock.unlock()
+
+        onUpdate(snapshotsToPublish)
+    }
+
+    private func schedule(after delay: TimeInterval, action: @escaping () -> Void) {
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self, !self.isCancellationRequested else {
+                return
+            }
+            action()
+        }
+
+        lock.lock()
+        scheduledWorkItems.append(workItem)
+        lock.unlock()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+
+    private func finishIfNeeded() {
+        let snapshotsToPublish: [BatchStatusSnapshot]
+
+        lock.lock()
+        guard !hasCompleted else {
+            lock.unlock()
+            return
+        }
+        hasCompleted = true
+        snapshotsToPublish = snapshotsLocked()
+        lock.unlock()
+
+        onCompletion(snapshotsToPublish)
+    }
+
+    private var isCancellationRequested: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return cancellationRequested
+    }
+
+    private func snapshotsLocked() -> [BatchStatusSnapshot] {
+        items.map { item in
+            BatchStatusSnapshot(id: item.id, fileName: item.file.displayName, state: item.state)
+        }
+    }
+
+    private func makeOutputURL(for file: SelectedAudioFile) -> URL {
+        file.directoryURL.appendingPathComponent(
+            file.url.deletingPathExtension().lastPathComponent + "." + format.outputExtension
+        )
     }
 }
 

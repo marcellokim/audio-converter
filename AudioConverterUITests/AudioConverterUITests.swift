@@ -96,9 +96,56 @@ final class AudioConverterUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Start Conversion"].isEnabled)
     }
 
+    func testConversionScenarioRunsFromSelectionThroughCompletion() {
+        let app = makeApp(
+            fileSelectionScenario: "multiple",
+            conversionScenario: "complete-success"
+        )
+        app.launch()
+
+        let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
+        selectFilesButton.tap()
+
+        let startConversionButton = app.buttons["start-conversion"]
+        XCTAssertTrue(startConversionButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(startConversionButton.isEnabled)
+
+        startConversionButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Finished conversion to MP3: 2 converted."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Complete 2"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Saved to ui-test-source-1.mp3."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Saved to ui-test-source-2.mp3."].waitForExistence(timeout: 5))
+    }
+
+    func testConversionScenarioCanCancelAnInFlightBatch() {
+        let app = makeApp(
+            fileSelectionScenario: "multiple",
+            conversionScenario: "cancel-after-start"
+        )
+        app.launch()
+
+        let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
+        selectFilesButton.tap()
+
+        let startConversionButton = app.buttons["start-conversion"]
+        XCTAssertTrue(startConversionButton.waitForExistence(timeout: 5))
+        startConversionButton.tap()
+
+        let cancelBatchButton = app.buttons["cancel-conversion"]
+        XCTAssertTrue(cancelBatchButton.waitForExistence(timeout: 5))
+
+        cancelBatchButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Finished conversion to MP3: 2 cancelled."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Cancelled 2"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Cancelled before completion."].waitForExistence(timeout: 5))
+    }
+
     private func makeApp(
         startupScenario: String? = nil,
-        fileSelectionScenario: String? = nil
+        fileSelectionScenario: String? = nil,
+        conversionScenario: String? = nil
     ) -> XCUIApplication {
         let app = XCUIApplication()
 
@@ -110,6 +157,11 @@ final class AudioConverterUITests: XCTestCase {
         if let fileSelectionScenario {
             app.launchArguments.append("--uitest-file-selection-scenario")
             app.launchEnvironment["AUDIOCONVERTER_UI_TEST_FILE_SELECTION_SCENARIO"] = fileSelectionScenario
+        }
+
+        if let conversionScenario {
+            app.launchArguments.append("--uitest-conversion-scenario")
+            app.launchEnvironment["AUDIOCONVERTER_UI_TEST_CONVERSION_SCENARIO"] = conversionScenario
         }
 
         return app
