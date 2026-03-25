@@ -154,6 +154,28 @@ final class AudioConverterUITests: XCTestCase {
         XCTAssertEqual(stagedFileNames(in: app), ["ui-test-source-2.aiff", "ui-test-source-1.wav"])
     }
 
+    func testMergeModeStillRequiresAtLeastTwoFiles() throws {
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "single",
+            savePanelScenario: "choose-destination"
+        )
+        app.launch()
+
+        let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
+        try enterMergeMode(in: app)
+        selectFilesButton.tap()
+
+        let chooseDestinationButton = app.buttons["select-merge-destination"]
+        XCTAssertTrue(chooseDestinationButton.waitForExistence(timeout: 5))
+        waitForHittable(chooseDestinationButton)
+        chooseDestinationButton.tap()
+
+        let startMergeButton = app.buttons["start-merge"]
+        XCTAssertTrue(startMergeButton.waitForExistence(timeout: 5))
+        XCTAssertFalse(startMergeButton.isEnabled)
+    }
+
     func testMergeScenarioProducesExactlyOneBatchStatusRow() throws {
         let app = makeApp(
             startupScenario: "always-ready",
