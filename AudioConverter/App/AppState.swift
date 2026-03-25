@@ -85,10 +85,13 @@ final class AppState: ObservableObject {
 
     init(
         resolveFFmpegURL: @escaping FFmpegResolver = AppState.defaultResolveFFmpegURL,
-        validateStartupCapabilities: @escaping CapabilityValidator = { _ in FFmpegStartupSelfCheck().validateCapabilities(for: $0) },
+        validateStartupCapabilities: @escaping CapabilityValidator = { FFmpegStartupSelfCheck().validateCapabilities(for: $0) },
         selectAudioFiles: @escaping FileSelector = { OpenPanelPresenter().selectFiles() },
         selectMergeDestinationURL: @escaping MergeDestinationSelector = { files, format in
-            SavePanelPresenter().selectDestination(for: files, outputFormat: format)
+            SavePanelPresenter().chooseDestination(
+                for: format,
+                suggestedBaseName: files.first?.url.deletingPathExtension().lastPathComponent ?? "merged-audio"
+            )
         },
         makeConversionSession: @escaping ConversionSessionFactory = { files, format, ffmpegURL, onUpdate, onCompletion in
             ConversionCoordinator().makeSession(
