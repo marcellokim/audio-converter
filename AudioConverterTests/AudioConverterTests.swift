@@ -200,6 +200,76 @@ final class AudioConverterTests: XCTestCase {
         XCTAssertFalse(state.canRemoveSelectedFiles)
     }
 
+    func testMergeModeRequiresDestinationAndAtLeastTwoFiles() {
+        let state = makeReadyAppState(
+            selectMergeDestinationURL: { _, _ in
+                URL(fileURLWithPath: "/tmp/merged-output.mp3")
+            }
+        )
+        state.operationMode = .mergeIntoOne
+        state.outputFormat = "mp3"
+
+        XCTAssertFalse(state.canStartMerge)
+
+        state.selectedFiles = [URL(fileURLWithPath: "/tmp/intro.wav")]
+        XCTAssertFalse(state.canStartMerge)
+
+        state.selectedFiles = [
+            URL(fileURLWithPath: "/tmp/intro.wav"),
+            URL(fileURLWithPath: "/tmp/verse.wav")
+        ]
+
+        XCTAssertTrue(state.canChooseMergeDestination)
+        XCTAssertFalse(state.canStartMerge)
+
+        state.selectMergeDestination()
+
+        XCTAssertEqual(state.mergeDestinationURL, URL(fileURLWithPath: "/tmp/merged-output.mp3"))
+        XCTAssertTrue(state.canStartMerge)
+    }
+
+    func testMoveSelectedFileUpReordersFilesOnlyInMergeMode() {
+        let state = makeReadyAppState()
+        let first = SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/intro.wav"))
+        let second = SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/verse.wav"))
+        let third = SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/outro.wav"))
+        state.selectedFiles = [first.url, second.url, third.url]
+
+        state.moveSelectedFileUp(second)
+        XCTAssertEqual(state.selectedFiles, [first.url, second.url, third.url])
+
+        state.operationMode = .mergeIntoOne
+        state.moveSelectedFileUp(second)
+        XCTAssertEqual(state.selectedFiles, [second.url, first.url, third.url])
+
+        state.moveSelectedFileDown(second)
+        XCTAssertEqual(state.selectedFiles, [first.url, second.url, third.url])
+    }
+
+    func testStartMergeDispatchesOrderedFilesAndDestinationIntoMergeSession() {
+        let session = ControlledMergeSession()
+        let destinationURL = URL(fileURLWithPath: "/tmp/final-mix.mp3")
+        let state = makeReadyAppState(
+            session: ControlledConversionSession(),
+            mergeSession: session,
+            selectMergeDestinationURL: { _, _ in destinationURL }
+        )
+        let first = SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/intro.wav"))
+        let second = SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/verse.wav"))
+
+        state.operationMode = .mergeIntoOne
+        state.selectedFiles = [first.url, second.url]
+        state.outputFormat = "mp3"
+        state.moveSelectedFileUp(second)
+        state.selectMergeDestination()
+        state.startPrimaryAction()
+
+        XCTAssertEqual(session.startCallCount, 1)
+        XCTAssertEqual(session.capturedFiles.map(\.url), [second.url, first.url])
+        XCTAssertEqual(session.capturedDestinationURL, destinationURL)
+        XCTAssertTrue(state.isConverting)
+    }
+
     func testStartConversionConsumesLiveSessionUpdatesBeforeCompletion() {
         let session = ControlledConversionSession()
         let state = makeReadyAppState(session: session)
@@ -273,17 +343,30 @@ final class AudioConverterTests: XCTestCase {
 
     private func makeReadyAppState(
         session: ControlledConversionSession? = nil,
-        selectAudioFiles: @escaping AppState.FileSelector = { [] }
+        mergeSession: ControlledMergeSession? = nil,
+        selectAudioFiles: @escaping AppState.FileSelector = { [] },
+        selectMergeDestinationURL: @escaping AppState.MergeDestinationSelector = { _, _ in nil }
     ) -> AppState {
         let controlledSession = session ?? ControlledConversionSession()
+        let controlledMergeSession = mergeSession ?? ControlledMergeSession()
         let state = AppState(
             resolveFFmpegURL: { .ready(URL(fileURLWithPath: "/bin/sh")) },
             validateStartupCapabilities: { _ in .ready },
             selectAudioFiles: selectAudioFiles,
+            selectMergeDestinationURL: selectMergeDestinationURL,
             makeConversionSession: { _, _, _, onUpdate, onCompletion in
                 controlledSession.onUpdate = onUpdate
                 controlledSession.onCompletion = onCompletion
                 return controlledSession
+            },
+            makeMergeSession: { files, format, destinationURL, ffmpegURL, onUpdate, onCompletion in
+                controlledMergeSession.capturedFiles = files
+                controlledMergeSession.capturedFormat = format
+                controlledMergeSession.capturedDestinationURL = destinationURL
+                controlledMergeSession.capturedFFmpegURL = ffmpegURL
+                controlledMergeSession.onUpdate = onUpdate
+                controlledMergeSession.onCompletion = onCompletion
+                return controlledMergeSession
             }
         )
         state.performStartupChecks()
@@ -328,5 +411,24 @@ private final class ControlledConversionSession: BatchConversionSessioning {
 
     func emitCompletion(_ snapshots: [BatchStatusSnapshot]) {
         onCompletion?(snapshots)
+    }
+}
+
+private final class ControlledMergeSession: BatchConversionSessioning {
+    var onUpdate: (([BatchStatusSnapshot]) -> Void)?
+    var onCompletion: (([BatchStatusSnapshot]) -> Void)?
+    private(set) var startCallCount = 0
+    private(set) var cancelCallCount = 0
+    var capturedFiles: [SelectedAudioFile] = []
+    var capturedFormat: SupportedFormat?
+    var capturedDestinationURL: URL?
+    var capturedFFmpegURL: URL?
+
+    func start() {
+        startCallCount += 1
+    }
+
+    func cancelAll() {
+        cancelCallCount += 1
     }
 }

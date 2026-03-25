@@ -56,6 +56,7 @@
 		CD7A3656F3D80FCEBBD394C3 /* FormatValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B52ED701BD5D74E20794938F /* FormatValidator.swift */; };
 		D1084BCDFAF1EA0BA3A2C246 /* CapabilityChecking.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7C97F175E7679C2DD0ABBC8 /* CapabilityChecking.swift */; };
 		D13F75A8E20FFAE2F2A22264 /* MockFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B7E838A29F302C4D790B2E /* MockFileManager.swift */; };
+		D21B9A6370C3FC04BE422572 /* MergeExportEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8B32C591E8ABA01D534717 /* MergeExportEngineTests.swift */; };
 		D7C187581FCD3ACDB44E860D /* FFmpegCommandBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5018A57B35AE681DFCF1AF6D /* FFmpegCommandBuilderTests.swift */; };
 		DA7956888C63C8218D426C5E /* FormatValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05B5C971BE5487BC47C796C8 /* FormatValidatorTests.swift */; };
 		E154554C3278E73A7C911606 /* StartupState.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE7147A8DB8882A646ECE52D /* StartupState.swift */; };
@@ -129,6 +130,7 @@
 		B562AD5D5B2E53CD1CFACB26 /* MockFFmpegRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockFFmpegRunner.swift; sourceTree = "<group>"; };
 		B7BF1FE6422BB74A64F92656 /* AudioConverterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioConverterApp.swift; sourceTree = "<group>"; };
 		B7C97F175E7679C2DD0ABBC8 /* CapabilityChecking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapabilityChecking.swift; sourceTree = "<group>"; };
+		BB8B32C591E8ABA01D534717 /* MergeExportEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MergeExportEngineTests.swift; sourceTree = "<group>"; };
 		BE7147A8DB8882A646ECE52D /* StartupState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupState.swift; sourceTree = "<group>"; };
 		C522BA732CC5BC6BA124E813 /* BatchStatusListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchStatusListView.swift; sourceTree = "<group>"; };
 		CCCB564853819212825469F0 /* BuildSettings.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BuildSettings.xcconfig; sourceTree = "<group>"; };
@@ -208,6 +210,7 @@
 				6FCAD58BCC2FB99D79E89C27 /* FileManagingTests.swift */,
 				B10AF9EC802A38B185860D58 /* FormatRegistryTests.swift */,
 				05B5C971BE5487BC47C796C8 /* FormatValidatorTests.swift */,
+				BB8B32C591E8ABA01D534717 /* MergeExportEngineTests.swift */,
 				9B8250D0FFD3E4416B150AE5 /* OpenPanelPresenterTests.swift */,
 				4F5D865D0A05D42A0F1C4D04 /* OutputPathResolverTests.swift */,
 				0C7F18A285DF6A1DD56692F4 /* RealFFmpegIntegrationTests.swift */,
@@ -516,6 +519,7 @@
 				559527CC5883C9CC17C6D163 /* FileManagingTests.swift in Sources */,
 				102CF531B21F79A2386AA7C1 /* FormatRegistryTests.swift in Sources */,
 				DA7956888C63C8218D426C5E /* FormatValidatorTests.swift in Sources */,
+				D21B9A6370C3FC04BE422572 /* MergeExportEngineTests.swift in Sources */,
 				9A81415F055C4DE56BD50FD1 /* MockFFmpegRunner.swift in Sources */,
 				D13F75A8E20FFAE2F2A22264 /* MockFileManager.swift in Sources */,
 				F82DAE3A8A9DB1491330A718 /* OpenPanelPresenterTests.swift in Sources */,
