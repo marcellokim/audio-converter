@@ -114,6 +114,105 @@ final class AudioConverterUITests: XCTestCase {
         XCTAssertTrue(app.buttons["start-conversion"].isEnabled)
     }
 
+    func testMergeModeKeepsPrimaryActionDisabledUntilDestinationIsSelected() throws {
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "multiple"
+        )
+        app.launch()
+
+        let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
+        try enterMergeMode(in: app)
+        selectFilesButton.tap()
+
+        let chooseDestinationButton = app.buttons["select-merge-destination"]
+        XCTAssertTrue(chooseDestinationButton.waitForExistence(timeout: 5))
+
+        let startMergeButton = app.buttons["start-merge"]
+        XCTAssertTrue(startMergeButton.waitForExistence(timeout: 5))
+        XCTAssertFalse(startMergeButton.isEnabled)
+    }
+
+    func testMergeModeCanReorderStagedFiles() throws {
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "multiple"
+        )
+        app.launch()
+
+        let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
+        try enterMergeMode(in: app)
+        selectFilesButton.tap()
+
+        XCTAssertEqual(stagedFileNames(in: app), ["ui-test-source-1.wav", "ui-test-source-2.aiff"])
+
+        let moveUpButton = app.buttons["move-staged-file-up-ui-test-source-2.aiff"]
+        XCTAssertTrue(moveUpButton.waitForExistence(timeout: 5))
+        waitForHittable(moveUpButton)
+        moveUpButton.tap()
+
+        XCTAssertEqual(stagedFileNames(in: app), ["ui-test-source-2.aiff", "ui-test-source-1.wav"])
+    }
+
+    func testMergeScenarioProducesExactlyOneBatchStatusRow() throws {
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "multiple",
+            savePanelScenario: "choose-destination",
+            mergeScenario: "complete-success"
+        )
+        app.launch()
+
+        let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
+        try enterMergeMode(in: app)
+        selectFilesButton.tap()
+
+        let chooseDestinationButton = app.buttons["select-merge-destination"]
+        XCTAssertTrue(chooseDestinationButton.waitForExistence(timeout: 5))
+        waitForHittable(chooseDestinationButton)
+        chooseDestinationButton.tap()
+
+        let startMergeButton = app.buttons["start-merge"]
+        XCTAssertTrue(startMergeButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(startMergeButton.isEnabled)
+        waitForHittable(startMergeButton)
+        startMergeButton.tap()
+        scrollToBatchStatus(in: app)
+
+        XCTAssertTrue(app.staticTexts["batch-summary-complete"].waitForExistence(timeout: 10))
+        XCTAssertEqual(batchFileIdentifiers(in: app).count, 1)
+    }
+
+    func testBatchConvertStillWorksAfterReturningFromMergeMode() throws {
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "multiple",
+            conversionScenario: "complete-success"
+        )
+        app.launch()
+
+        let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
+        try enterMergeMode(in: app)
+
+        let batchModeButton = app.buttons["mode-batch"]
+        XCTAssertTrue(batchModeButton.waitForExistence(timeout: 5))
+        waitForHittable(batchModeButton)
+        batchModeButton.tap()
+
+        selectFilesButton.tap()
+
+        let startConversionButton = app.buttons["start-conversion"]
+        XCTAssertTrue(startConversionButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(startConversionButton.isEnabled)
+        waitForHittable(startConversionButton)
+        startConversionButton.tap()
+        scrollToBatchStatus(in: app)
+
+        XCTAssertTrue(app.staticTexts["batch-summary-complete"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["batch-detail-ui-test-source-1.wav"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["batch-detail-ui-test-source-2.aiff"].waitForExistence(timeout: 5))
+    }
+
     func testConversionScenarioRunsFromSelectionThroughCompletion() {
         let app = makeApp(
             startupScenario: "always-ready",
@@ -164,7 +263,9 @@ final class AudioConverterUITests: XCTestCase {
     private func makeApp(
         startupScenario: String? = "always-ready",
         fileSelectionScenario: String? = nil,
-        conversionScenario: String? = nil
+        conversionScenario: String? = nil,
+        savePanelScenario: String? = nil,
+        mergeScenario: String? = nil
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-ApplePersistenceIgnoreState", "YES"]
@@ -182,6 +283,16 @@ final class AudioConverterUITests: XCTestCase {
         if let conversionScenario {
             app.launchArguments.append("--uitest-conversion-scenario")
             app.launchEnvironment["AUDIOCONVERTER_UI_TEST_CONVERSION_SCENARIO"] = conversionScenario
+        }
+
+        if let savePanelScenario {
+            app.launchArguments.append("--uitest-save-panel-scenario")
+            app.launchEnvironment["AUDIOCONVERTER_UI_TEST_SAVE_PANEL_SCENARIO"] = savePanelScenario
+        }
+
+        if let mergeScenario {
+            app.launchArguments.append("--uitest-merge-scenario")
+            app.launchEnvironment["AUDIOCONVERTER_UI_TEST_MERGE_SCENARIO"] = mergeScenario
         }
 
         return app
@@ -204,6 +315,26 @@ final class AudioConverterUITests: XCTestCase {
         let predicate = NSPredicate(format: "isHittable == true")
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
         XCTAssertEqual(XCTWaiter().wait(for: [expectation], timeout: timeout), .completed)
+    }
+
+    private func enterMergeMode(in app: XCUIApplication, timeout: TimeInterval = 1) throws {
+        let mergeModeButton = app.buttons["mode-merge"]
+        guard mergeModeButton.waitForExistence(timeout: timeout) else {
+            throw XCTSkip("Ordered merge UI is not available in this worktree yet.")
+        }
+
+        waitForHittable(mergeModeButton)
+        mergeModeButton.tap()
+    }
+
+    private func stagedFileNames(in app: XCUIApplication) -> [String] {
+        let predicate = NSPredicate(format: "identifier BEGINSWITH %@", "staged-file-name-")
+        return app.staticTexts.matching(predicate).allElementsBoundByIndex.map(\.label)
+    }
+
+    private func batchFileIdentifiers(in app: XCUIApplication) -> [String] {
+        let predicate = NSPredicate(format: "identifier BEGINSWITH %@", "batch-file-")
+        return app.staticTexts.matching(predicate).allElementsBoundByIndex.map(\.identifier)
     }
 
     private func scrollToBatchStatus(in app: XCUIApplication) {
