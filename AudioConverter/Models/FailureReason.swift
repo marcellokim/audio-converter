@@ -3,6 +3,7 @@ import Foundation
 enum FailureReason: Equatable {
     case ffmpegUnavailable
     case invalidInput
+    case validation(String)
     case processLaunchFailed(String)
     case processFailed(String)
     case filesystem(String)
@@ -13,6 +14,8 @@ enum FailureReason: Equatable {
             return "The bundled ffmpeg binary is unavailable."
         case .invalidInput:
             return "The selected input could not be validated."
+        case let .validation(details):
+            return details
         case let .processLaunchFailed(details):
             return details
         case let .processFailed(details):
