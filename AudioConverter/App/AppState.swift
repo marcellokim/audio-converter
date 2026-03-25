@@ -6,8 +6,6 @@ protocol BatchConversionSessioning: AnyObject {
 }
 
 extension ConversionCoordinatorSession: BatchConversionSessioning {}
-extension MergeExportSession: BatchConversionSessioning {}
-
 final class AppState: ObservableObject {
     enum FFmpegResolution {
         case ready(URL)

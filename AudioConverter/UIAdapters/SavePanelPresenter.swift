@@ -9,7 +9,8 @@ struct SavePanelPresenter {
 
     func chooseDestination(for format: SupportedFormat, suggestedBaseName: String = "merged-audio") -> URL? {
         let suggestedFileName: String
-        if suggestedBaseName.pathExtension.lowercased() == format.outputExtension.lowercased() {
+        let existingExtension = (suggestedBaseName as NSString).pathExtension.lowercased()
+        if existingExtension == format.outputExtension.lowercased() {
             suggestedFileName = suggestedBaseName
         } else {
             suggestedFileName = suggestedBaseName + "." + format.outputExtension
