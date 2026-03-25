@@ -6,6 +6,7 @@ protocol BatchConversionSessioning: AnyObject {
 }
 
 extension ConversionCoordinatorSession: BatchConversionSessioning {}
+extension MergeExportSession: BatchConversionSessioning {}
 
 final class AppState: ObservableObject {
     enum FFmpegResolution {
@@ -13,12 +14,28 @@ final class AppState: ObservableObject {
         case failure(String)
     }
 
+    enum OperationMode: String, CaseIterable, Identifiable {
+        case batchConvert
+        case mergeIntoOne
+
+        var id: String { rawValue }
+    }
+
     typealias FFmpegResolver = () -> FFmpegResolution
     typealias CapabilityValidator = (URL) -> StartupState
     typealias FileSelector = () -> [SelectedAudioFile]
+    typealias MergeDestinationSelector = ([SelectedAudioFile], SupportedFormat) -> URL?
     typealias ConversionSessionFactory = (
         [SelectedAudioFile],
         SupportedFormat,
+        URL,
+        @escaping ([BatchStatusSnapshot]) -> Void,
+        @escaping ([BatchStatusSnapshot]) -> Void
+    ) -> any BatchConversionSessioning
+    typealias MergeSessionFactory = (
+        [SelectedAudioFile],
+        SupportedFormat,
+        URL,
         URL,
         @escaping ([BatchStatusSnapshot]) -> Void,
         @escaping ([BatchStatusSnapshot]) -> Void
@@ -36,17 +53,31 @@ final class AppState: ObservableObject {
         }
     }
 
+    @Published var operationMode: OperationMode = .batchConvert {
+        didSet {
+            guard operationMode != oldValue else {
+                return
+            }
+
+            clearBatchSnapshotsForSelectionMutation()
+            refreshStatusMessageForCurrentInputs()
+        }
+    }
+
     @Published var statusMessage: String = "Launch the app to run the bundled ffmpeg self-check."
     @Published var startupError: String?
     @Published private(set) var startupState: StartupState = .idle
     @Published private(set) var batchSnapshots: [BatchStatusSnapshot] = []
     @Published private(set) var isConverting = false
     @Published private(set) var isCancelling = false
+    @Published private(set) var mergeDestinationURL: URL?
 
     private let resolveFFmpegURL: FFmpegResolver
     private let validateStartupCapabilities: CapabilityValidator
     private let selectAudioFiles: FileSelector
+    private let selectMergeDestinationURL: MergeDestinationSelector
     private let makeConversionSession: ConversionSessionFactory
+    private let makeMergeSession: MergeSessionFactory
 
     private var ffmpegURL: URL?
     private var hasPerformedStartupChecks = false
@@ -54,12 +85,25 @@ final class AppState: ObservableObject {
 
     init(
         resolveFFmpegURL: @escaping FFmpegResolver = AppState.defaultResolveFFmpegURL,
-        validateStartupCapabilities: @escaping CapabilityValidator = { FFmpegStartupSelfCheck().validateCapabilities(for: $0) },
+        validateStartupCapabilities: @escaping CapabilityValidator = { _ in FFmpegStartupSelfCheck().validateCapabilities(for: $0) },
         selectAudioFiles: @escaping FileSelector = { OpenPanelPresenter().selectFiles() },
+        selectMergeDestinationURL: @escaping MergeDestinationSelector = { files, format in
+            SavePanelPresenter().selectDestination(for: files, outputFormat: format)
+        },
         makeConversionSession: @escaping ConversionSessionFactory = { files, format, ffmpegURL, onUpdate, onCompletion in
             ConversionCoordinator().makeSession(
                 files: files,
                 format: format,
+                ffmpegURL: ffmpegURL,
+                onUpdate: onUpdate,
+                onCompletion: onCompletion
+            )
+        },
+        makeMergeSession: @escaping MergeSessionFactory = { files, format, destinationURL, ffmpegURL, onUpdate, onCompletion in
+            MergeExportSession(
+                files: files,
+                format: format,
+                destinationURL: destinationURL,
                 ffmpegURL: ffmpegURL,
                 onUpdate: onUpdate,
                 onCompletion: onCompletion
@@ -69,7 +113,9 @@ final class AppState: ObservableObject {
         self.resolveFFmpegURL = resolveFFmpegURL
         self.validateStartupCapabilities = validateStartupCapabilities
         self.selectAudioFiles = selectAudioFiles
+        self.selectMergeDestinationURL = selectMergeDestinationURL
         self.makeConversionSession = makeConversionSession
+        self.makeMergeSession = makeMergeSession
     }
 
     var selectedAudioFiles: [SelectedAudioFile] {
@@ -102,7 +148,43 @@ final class AppState: ObservableObject {
     }
 
     var canStartConversion: Bool {
+        guard operationMode == .batchConvert else {
+            return false
+        }
+
         guard canOpenFiles, !selectedFiles.isEmpty else {
+            return false
+        }
+
+        guard case .valid = formatValidationState else {
+            return false
+        }
+
+        return true
+    }
+
+    var canChooseMergeDestination: Bool {
+        guard operationMode == .mergeIntoOne else {
+            return false
+        }
+
+        guard canOpenFiles, !selectedFiles.isEmpty else {
+            return false
+        }
+
+        guard case .valid = formatValidationState else {
+            return false
+        }
+
+        return true
+    }
+
+    var canStartMerge: Bool {
+        guard operationMode == .mergeIntoOne else {
+            return false
+        }
+
+        guard canOpenFiles, selectedFiles.count >= 2, mergeDestinationURL != nil else {
             return false
         }
 
@@ -115,6 +197,10 @@ final class AppState: ObservableObject {
 
     var canCancelConversion: Bool {
         isConverting && !isCancelling && currentSession != nil
+    }
+
+    var canReorderSelectedFiles: Bool {
+        operationMode == .mergeIntoOne && !isConverting && selectedFiles.count > 1
     }
 
     func performStartupChecksIfNeeded() {
@@ -202,7 +288,50 @@ final class AppState: ObservableObject {
 
         clearBatchSnapshotsForSelectionMutation()
         selectedFiles = files.map(\.url)
-        statusMessage = "Loaded \(files.count) source file(s)."
+        statusMessage = operationMode == .mergeIntoOne
+            ? "Loaded \(files.count) source file(s) for ordered merge."
+            : "Loaded \(files.count) source file(s)."
+        refreshStatusMessageForCurrentInputs()
+    }
+
+    func selectMergeDestination() {
+        guard canChooseMergeDestination else {
+            return
+        }
+
+        let files = selectedAudioFiles
+        guard !files.isEmpty else {
+            statusMessage = "Select one or more source audio files before choosing a merge destination."
+            return
+        }
+
+        let format: SupportedFormat
+        switch formatValidationState {
+        case let .valid(value):
+            format = value
+        case let .invalidFormat(input):
+            let normalized = FormatRegistry.normalizedKey(for: input)
+            statusMessage = normalized.isEmpty
+                ? "Enter an output format such as \(Self.supportedFormatSummary)."
+                : "\"\(normalized)\" is not supported. Try \(Self.supportedFormatSummary)."
+            return
+        case .idle:
+            statusMessage = "Enter an output format such as \(Self.supportedFormatSummary)."
+            return
+        }
+
+        let destinationURL = selectMergeDestinationURL(files, format)
+        guard let destinationURL else {
+            if let mergeDestinationURL {
+                statusMessage = "Destination selection cancelled. Keeping \(mergeDestinationURL.lastPathComponent)."
+            } else {
+                statusMessage = "Destination selection cancelled."
+            }
+            return
+        }
+
+        clearBatchSnapshotsForSelectionMutation()
+        mergeDestinationURL = destinationURL
         refreshStatusMessageForCurrentInputs()
     }
 
@@ -217,6 +346,23 @@ final class AppState: ObservableObject {
 
         clearBatchSnapshotsForSelectionMutation()
         selectedFiles.removeAll { $0 == file.url }
+    }
+
+    func moveSelectedFileUp(_ file: SelectedAudioFile) {
+        moveSelectedFile(file, by: -1)
+    }
+
+    func moveSelectedFileDown(_ file: SelectedAudioFile) {
+        moveSelectedFile(file, by: 1)
+    }
+
+    func startPrimaryAction() {
+        switch operationMode {
+        case .batchConvert:
+            startConversion()
+        case .mergeIntoOne:
+            startMerge()
+        }
     }
 
     func startConversion() {
@@ -297,14 +443,118 @@ final class AppState: ObservableObject {
         session.start()
     }
 
+    func startMerge() {
+        guard !isConverting else {
+            return
+        }
+
+        guard startupState == .ready else {
+            statusMessage = startupError ?? "Bundled ffmpeg is not ready yet."
+            return
+        }
+
+        let files = selectedAudioFiles
+        guard files.count >= 2 else {
+            statusMessage = "Select at least two source audio files before merging."
+            return
+        }
+
+        guard let ffmpegURL else {
+            statusMessage = "Bundled ffmpeg binary is unavailable."
+            return
+        }
+
+        let format: SupportedFormat
+        switch formatValidationState {
+        case let .valid(value):
+            format = value
+        case let .invalidFormat(input):
+            let normalized = FormatRegistry.normalizedKey(for: input)
+            statusMessage = normalized.isEmpty
+                ? "Enter an output format such as \(Self.supportedFormatSummary)."
+                : "\"\(normalized)\" is not supported. Try \(Self.supportedFormatSummary)."
+            return
+        case .idle:
+            statusMessage = "Enter an output format such as \(Self.supportedFormatSummary)."
+            return
+        }
+
+        guard let mergeDestinationURL else {
+            statusMessage = "Choose a destination for the merged \(format.displayName) file."
+            return
+        }
+
+        isConverting = true
+        isCancelling = false
+        statusMessage = "Merging \(files.count) file(s) into \(mergeDestinationURL.lastPathComponent)…"
+        batchSnapshots = []
+
+        let session = makeMergeSession(
+            files,
+            format,
+            mergeDestinationURL,
+            ffmpegURL,
+            { [weak self] snapshots in
+                self?.performOnMain {
+                    guard let self else {
+                        return
+                    }
+
+                    self.batchSnapshots = snapshots
+                    if self.isConverting {
+                        self.statusMessage = self.isCancelling
+                            ? "Cancelling current merge…"
+                            : self.makeMergeInFlightStatusMessage(for: snapshots, format: format)
+                    }
+                }
+            },
+            { [weak self] snapshots in
+                self?.performOnMain {
+                    guard let self else {
+                        return
+                    }
+
+                    self.isConverting = false
+                    self.isCancelling = false
+                    self.currentSession = nil
+                    self.batchSnapshots = snapshots
+                    self.statusMessage = self.makeMergeCompletionStatusMessage(for: snapshots, format: format)
+                }
+            }
+        )
+
+        currentSession = session
+        session.start()
+    }
+
     func cancelConversion() {
         guard let currentSession, canCancelConversion else {
             return
         }
 
         isCancelling = true
-        statusMessage = "Cancelling current batch…"
+        statusMessage = operationMode == .mergeIntoOne
+            ? "Cancelling current merge…"
+            : "Cancelling current batch…"
         currentSession.cancelAll()
+    }
+
+    private func moveSelectedFile(_ file: SelectedAudioFile, by delta: Int) {
+        guard canReorderSelectedFiles,
+              let currentIndex = selectedFiles.firstIndex(of: file.url) else {
+            return
+        }
+
+        let destinationIndex = currentIndex + delta
+        guard selectedFiles.indices.contains(destinationIndex) else {
+            return
+        }
+
+        clearBatchSnapshotsForSelectionMutation()
+        var nextFiles = selectedFiles
+        let movedFile = nextFiles.remove(at: currentIndex)
+        nextFiles.insert(movedFile, at: destinationIndex)
+        selectedFiles = nextFiles
     }
 
     private func refreshStatusMessageForCurrentInputs() {
@@ -320,20 +570,53 @@ final class AppState: ObservableObject {
         case let .startupError(message):
             statusMessage = message
         case .ready:
-            switch formatValidationState {
-            case .idle:
-                statusMessage = selectedFiles.isEmpty
-                    ? "Bundled ffmpeg is ready. Select source files and choose an output format."
-                    : "Enter an output format such as \(Self.supportedFormatSummary)."
-            case let .invalidFormat(input):
-                let normalized = FormatRegistry.normalizedKey(for: input)
-                statusMessage = normalized.isEmpty
-                    ? "Enter an output format such as \(Self.supportedFormatSummary)."
-                    : "\"\(normalized)\" is not supported. Try \(Self.supportedFormatSummary)."
-            case let .valid(format):
-                statusMessage = selectedFiles.isEmpty
-                    ? "Bundled ffmpeg is ready. Select source files to convert to \(format.displayName)."
-                    : "Ready to convert \(selectedFiles.count) file(s) to \(format.displayName)."
+            switch operationMode {
+            case .batchConvert:
+                refreshBatchStatusMessage()
+            case .mergeIntoOne:
+                refreshMergeStatusMessage()
+            }
+        }
+    }
+
+    private func refreshBatchStatusMessage() {
+        switch formatValidationState {
+        case .idle:
+            statusMessage = selectedFiles.isEmpty
+                ? "Bundled ffmpeg is ready. Select source files and choose an output format."
+                : "Enter an output format such as \(Self.supportedFormatSummary)."
+        case let .invalidFormat(input):
+            let normalized = FormatRegistry.normalizedKey(for: input)
+            statusMessage = normalized.isEmpty
+                ? "Enter an output format such as \(Self.supportedFormatSummary)."
+                : "\"\(normalized)\" is not supported. Try \(Self.supportedFormatSummary)."
+        case let .valid(format):
+            statusMessage = selectedFiles.isEmpty
+                ? "Bundled ffmpeg is ready. Select source files to convert to \(format.displayName)."
+                : "Ready to convert \(selectedFiles.count) file(s) to \(format.displayName)."
+        }
+    }
+
+    private func refreshMergeStatusMessage() {
+        switch formatValidationState {
+        case .idle:
+            statusMessage = selectedFiles.isEmpty
+                ? "Bundled ffmpeg is ready. Select two or more source files and choose an output format to merge."
+                : "Enter an output format such as \(Self.supportedFormatSummary)."
+        case let .invalidFormat(input):
+            let normalized = FormatRegistry.normalizedKey(for: input)
+            statusMessage = normalized.isEmpty
+                ? "Enter an output format such as \(Self.supportedFormatSummary)."
+                : "\"\(normalized)\" is not supported. Try \(Self.supportedFormatSummary)."
+        case let .valid(format):
+            if selectedFiles.isEmpty {
+                statusMessage = "Bundled ffmpeg is ready. Select two or more source files to merge into one \(format.displayName) file."
+            } else if selectedFiles.count == 1 {
+                statusMessage = "Add at least one more source file to merge into one \(format.displayName) file."
+            } else if let mergeDestinationURL {
+                statusMessage = "Ready to merge \(selectedFiles.count) file(s) into \(mergeDestinationURL.lastPathComponent)."
+            } else {
+                statusMessage = "Choose a destination for the merged \(format.displayName) file."
             }
         }
     }
@@ -383,6 +666,23 @@ final class AppState: ObservableObject {
         return "Finished conversion to \(format.displayName): \(summary)."
     }
 
+    private func makeMergeCompletionStatusMessage(for snapshots: [BatchStatusSnapshot], format: SupportedFormat) -> String {
+        guard let snapshot = snapshots.first else {
+            return "Finished merge to \(format.displayName), but no output was produced."
+        }
+
+        switch snapshot.state {
+        case let .succeeded(outputURL):
+            return "Finished merge to \(format.displayName): saved \(outputURL.lastPathComponent)."
+        case .cancelled:
+            return "Finished merge to \(format.displayName): cancelled."
+        case .failed, .skipped:
+            return snapshot.displayedDetail
+        case .queued, .running:
+            return "Merge is still in progress."
+        }
+    }
+
     private func makeInFlightStatusMessage(for snapshots: [BatchStatusSnapshot], format: SupportedFormat) -> String {
         let summary = [
             summaryCount(in: snapshots, matching: { if case .queued = $0 { return true } else { return false } }, label: "queued"),
@@ -400,6 +700,23 @@ final class AppState: ObservableObject {
         }
 
         return "Converting to \(format.displayName): \(summary)."
+    }
+
+    private func makeMergeInFlightStatusMessage(for snapshots: [BatchStatusSnapshot], format: SupportedFormat) -> String {
+        guard let snapshot = snapshots.first else {
+            return "Merging to \(format.displayName)…"
+        }
+
+        switch snapshot.state {
+        case .queued:
+            return "Preparing merge to \(format.displayName)…"
+        case .running:
+            return snapshot.displayedDetail.isEmpty
+                ? "Merging to \(format.displayName)…"
+                : snapshot.displayedDetail
+        case .succeeded, .failed, .skipped, .cancelled:
+            return snapshot.displayedDetail
+        }
     }
 
     private func summaryCount(
