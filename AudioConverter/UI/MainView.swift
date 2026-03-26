@@ -257,10 +257,19 @@ struct MainView: View {
         mode: AppState.OperationMode,
         identifier: String
     ) -> some View {
-        Button(title) {
-            appState.operationMode = mode
+        Group {
+            if mode == appState.operationMode {
+                Button(title) {
+                    appState.operationMode = mode
+                }
+                .buttonStyle(.borderedProminent)
+            } else {
+                Button(title) {
+                    appState.operationMode = mode
+                }
+                .buttonStyle(.bordered)
+            }
         }
-        .buttonStyle(mode == appState.operationMode ? .borderedProminent : .bordered)
         .disabled(appState.isConverting)
         .accessibilityIdentifier(identifier)
     }
