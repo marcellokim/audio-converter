@@ -100,7 +100,6 @@ struct FileSelectionView: View {
                                     .accessibilityIdentifier("remove-staged-file-\(file.displayName)")
                                 }
                             }
-                            .fixedSize()
                         }
                         .padding(14)
                         .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
