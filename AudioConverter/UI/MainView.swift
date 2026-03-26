@@ -20,7 +20,7 @@ struct MainView: View {
                     workspace(for: layout)
                 }
                 .padding(WorkspaceChrome.pagePadding)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(width: max(layout.availableWidth, 0), alignment: .leading)
             }
         }
     }
@@ -39,7 +39,7 @@ struct MainView: View {
                 secondaryLane
                     .frame(width: secondaryWidth, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(width: max(layout.availableWidth, 0), alignment: .leading)
         } else {
             VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
                 FileSelectionView(
@@ -58,6 +58,7 @@ struct MainView: View {
 
                 BatchStatusListView(snapshots: appState.batchSnapshots)
             }
+            .frame(width: max(layout.availableWidth, 0), alignment: .leading)
         }
     }
 
