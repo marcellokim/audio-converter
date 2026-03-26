@@ -382,7 +382,13 @@ final class AudioConverterUITests: XCTestCase {
 
     private func stagedFileNames(in app: XCUIApplication) -> [String] {
         let predicate = NSPredicate(format: "identifier BEGINSWITH %@", "staged-file-name-")
-        return app.staticTexts.matching(predicate).allElementsBoundByIndex.map(\.label)
+        return app.staticTexts.matching(predicate).allElementsBoundByIndex.map { element in
+            if !element.label.isEmpty {
+                return element.label
+            }
+
+            return element.identifier.replacingOccurrences(of: "staged-file-name-", with: "")
+        }
     }
 
     private func batchFileIdentifiers(in app: XCUIApplication) -> [String] {
