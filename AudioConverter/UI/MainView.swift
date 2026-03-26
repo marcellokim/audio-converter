@@ -30,10 +30,12 @@ struct MainView: View {
         if layout.prefersTwoColumn {
             HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
                 primaryLane
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(1)
                 secondaryLane
-                    .frame(width: min(max(layout.availableWidth * 0.38, 300), 360), alignment: .leading)
+                    .frame(width: min(max(layout.availableWidth * 0.30, 240), 300), alignment: .leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
                 FileSelectionView(
@@ -271,6 +273,7 @@ struct MainView: View {
             }
         }
         .disabled(appState.isConverting)
+        .accessibilityIdentifier(identifier)
     }
 
     private var isMergeMode: Bool {
@@ -480,7 +483,7 @@ struct MainView: View {
 }
 
 struct MainViewLayout: Equatable {
-    static let wideBreakpoint: CGFloat = 880
+    static let wideBreakpoint: CGFloat = 840
 
     let windowWidth: CGFloat
     let availableWidth: CGFloat

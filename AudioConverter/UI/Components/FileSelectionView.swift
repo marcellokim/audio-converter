@@ -55,6 +55,7 @@ struct FileSelectionView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(file.displayName)
                                     .font(.custom("Hoefler Text", size: 19))
+                                    .accessibilityLabel(file.displayName)
                                     .accessibilityIdentifier("staged-file-name-\(file.displayName)")
                                 Text(file.directoryURL.path)
                                     .font(.custom("Menlo", size: 10))
