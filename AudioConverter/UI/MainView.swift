@@ -84,17 +84,24 @@ struct MainView: View {
         VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
             operationModeSection
 
-            FormatInputView(
-                outputFormat: $appState.outputFormat,
-                formats: FormatRegistry.allFormats,
-                isEnabled: !appState.isConverting
-            )
-
             if isMergeMode {
-                mergeDestinationSection
-            }
+                FormatInputView(
+                    outputFormat: $appState.outputFormat,
+                    formats: FormatRegistry.allFormats,
+                    isEnabled: !appState.isConverting
+                )
 
-            primaryActionSection
+                mergeDestinationSection
+                primaryActionSection
+            } else {
+                primaryActionSection
+
+                FormatInputView(
+                    outputFormat: $appState.outputFormat,
+                    formats: FormatRegistry.allFormats,
+                    isEnabled: !appState.isConverting
+                )
+            }
         }
     }
 
