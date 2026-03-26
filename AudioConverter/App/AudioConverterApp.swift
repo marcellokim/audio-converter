@@ -6,7 +6,9 @@ struct AudioConverterApp: App {
     @StateObject private var appState: AppState
 
     init() {
-        _appState = StateObject(wrappedValue: Self.makeAppState())
+        let processInfo = ProcessInfo.processInfo
+        _appState = StateObject(wrappedValue: Self.makeAppState(processInfo: processInfo))
+        initialWindowSize = Self.makeInitialWindowSize(processInfo: processInfo)
     }
 
     var body: some Scene {
