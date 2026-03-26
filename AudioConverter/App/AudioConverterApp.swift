@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct AudioConverterApp: App {
     @StateObject private var appState: AppState
+    private let initialWindowSize: CGSize
 
     init() {
         let processInfo = ProcessInfo.processInfo
@@ -20,7 +21,7 @@ struct AudioConverterApp: App {
                     appState.performStartupChecksIfNeeded()
                 }
         }
-        .defaultSize(width: 960, height: 920)
+        .defaultSize(width: initialWindowSize.width, height: initialWindowSize.height)
         .windowResizability(.contentSize)
     }
 
@@ -140,6 +141,51 @@ struct AudioConverterApp: App {
 #else
         return AppState()
 #endif
+    }
+
+    private static func makeInitialWindowSize(processInfo: ProcessInfo = .processInfo) -> CGSize {
+#if DEBUG
+        let windowSize = UITestWindowSize(
+            arguments: processInfo.arguments,
+            environment: processInfo.environment
+        )
+
+        if processInfo.arguments.contains(UITestWindowSize.launchArgument),
+           windowSize == nil {
+            fatalError(
+                "Invalid UI test window size. Set \(UITestWindowSize.widthEnvironmentKey) and \(UITestWindowSize.heightEnvironmentKey) to numeric values that satisfy \(UITestWindowSize.supportedValuesDescription)."
+            )
+        }
+
+        if let windowSize {
+            return windowSize.size
+        }
+#endif
+
+        return CGSize(width: 960, height: 920)
+    }
+}
+
+private struct UITestWindowSize {
+    static let widthEnvironmentKey = "AUDIOCONVERTER_UI_TEST_WINDOW_WIDTH"
+    static let heightEnvironmentKey = "AUDIOCONVERTER_UI_TEST_WINDOW_HEIGHT"
+    static let launchArgument = "--uitest-window-size"
+    static let supportedValuesDescription = "width >= 720 and height >= 820"
+
+    let size: CGSize
+
+    init?(arguments: [String], environment: [String: String]) {
+        guard arguments.contains(Self.launchArgument),
+              let rawWidth = environment[Self.widthEnvironmentKey],
+              let rawHeight = environment[Self.heightEnvironmentKey],
+              let width = Double(rawWidth),
+              let height = Double(rawHeight),
+              width >= 720,
+              height >= 820 else {
+            return nil
+        }
+
+        size = CGSize(width: width, height: height)
     }
 }
 
