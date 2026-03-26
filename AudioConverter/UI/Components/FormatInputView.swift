@@ -35,28 +35,30 @@ struct FormatInputView: View {
                 .disabled(!isEnabled)
                 .accessibilityLabel("Output format")
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(formats) { format in
-                        Button {
-                            outputFormat = format.id
-                        } label: {
-                            Text(format.id.uppercased())
-                                .font(WorkspaceType.metric)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(chipBackground(for: format), in: Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(chipStroke(for: format), lineWidth: 1)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(!isEnabled)
-                        .accessibilityLabel("Choose \(format.displayName) output")
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 56), spacing: 8, alignment: .leading)],
+                alignment: .leading,
+                spacing: 8
+            ) {
+                ForEach(formats) { format in
+                    Button {
+                        outputFormat = format.id
+                    } label: {
+                        Text(format.id.uppercased())
+                            .font(WorkspaceType.metric)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity)
+                            .background(chipBackground(for: format), in: Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(chipStroke(for: format), lineWidth: 1)
+                            )
                     }
+                    .buttonStyle(.plain)
+                    .disabled(!isEnabled)
+                    .accessibilityLabel("Choose \(format.displayName) output")
                 }
-                .padding(.vertical, 1)
             }
 
             Text(isEnabled ? "Supported formats: \(suggestedFormats)" : "Format changes pause while a conversion or merge is running.")
