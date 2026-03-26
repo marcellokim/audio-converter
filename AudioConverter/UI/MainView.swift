@@ -28,7 +28,7 @@ struct MainView: View {
     @ViewBuilder
     private func workspace(for layout: MainViewLayout) -> some View {
         if layout.prefersTwoColumn {
-            let secondaryWidth = min(max(layout.availableWidth * 0.30, 240), 280)
+            let secondaryWidth = min(max(layout.availableWidth * 0.28, 220), 250)
             HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
                 primaryLane
                     .frame(
@@ -195,23 +195,13 @@ struct MainView: View {
                 message: "Readiness, validation, and live progress stay separated so blocked states do not crowd the main CTA row."
             )
 
-            HStack(spacing: 10) {
-                Button(primaryActionTitle, action: handleStartPrimaryAction)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!canStartPrimaryAction)
-                    .accessibilityIdentifier(primaryActionIdentifier)
-
-                if appState.isConverting {
-                    Button(cancelActionTitle, action: handleCancelConversion)
-                        .buttonStyle(.bordered)
-                        .disabled(!appState.canCancelConversion)
-                        .accessibilityIdentifier(cancelActionIdentifier)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    actionButtons
                 }
 
-                if appState.canRetryStartupChecks {
-                    Button("Retry Startup Check", action: handleRetryStartupChecks)
-                        .buttonStyle(.bordered)
-                        .accessibilityIdentifier("retry-startup-check")
+                VStack(alignment: .leading, spacing: 10) {
+                    actionButtons
                 }
             }
 
@@ -256,6 +246,27 @@ struct MainView: View {
                 .applyAccessibilityIdentifier(identifier)
         }
         .workspaceInsetSurface(tone: tone)
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        Button(primaryActionTitle, action: handleStartPrimaryAction)
+            .buttonStyle(.borderedProminent)
+            .disabled(!canStartPrimaryAction)
+            .accessibilityIdentifier(primaryActionIdentifier)
+
+        if appState.isConverting {
+            Button(cancelActionTitle, action: handleCancelConversion)
+                .buttonStyle(.bordered)
+                .disabled(!appState.canCancelConversion)
+                .accessibilityIdentifier(cancelActionIdentifier)
+        }
+
+        if appState.canRetryStartupChecks {
+            Button("Retry Startup Check", action: handleRetryStartupChecks)
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("retry-startup-check")
+        }
     }
 
     private func modeButton(
@@ -488,7 +499,7 @@ struct MainView: View {
 }
 
 struct MainViewLayout: Equatable {
-    static let wideBreakpoint: CGFloat = 900
+    static let wideBreakpoint: CGFloat = 840
 
     let windowWidth: CGFloat
     let availableWidth: CGFloat

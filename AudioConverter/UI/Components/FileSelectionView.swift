@@ -65,9 +65,8 @@ struct FileSelectionView: View {
                                     .lineLimit(1)
                                     .truncationMode(.middle)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
                             .layoutPriority(1)
-                            Spacer()
+                            Spacer(minLength: 8)
                             if isMergeMode {
                                 HStack(spacing: 8) {
                                     Button {
