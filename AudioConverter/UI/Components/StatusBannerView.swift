@@ -3,65 +3,27 @@ import SwiftUI
 struct StatusBannerView: View {
     enum Tone {
         case checking
-        case blocked
         case ready
         case active
-
-        var iconName: String {
-            switch self {
-            case .checking:
-                return "waveform.path.ecg"
-            case .blocked:
-                return "waveform.path.badge.minus"
-            case .ready:
-                return "checkmark.circle.fill"
-            case .active:
-                return "arrow.triangle.2.circlepath.circle.fill"
-            }
-        }
-
-        var accentColor: Color {
-            switch self {
-            case .checking:
-                return .orange
-            case .blocked:
-                return .red
-            case .ready:
-                return .accentColor
-            case .active:
-                return .accentColor
-            }
-        }
+        case blocked
     }
 
     let title: String
     let message: String
     let tone: Tone
 
-    init(title: String, message: String, tone: Tone) {
-        self.title = title
-        self.message = message
-        self.tone = tone
-    }
-
-    init(title: String, message: String, isCritical: Bool) {
-        self.init(
-            title: title,
-            message: message,
-            tone: isCritical ? .blocked : .ready
-        )
-    }
-
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            Image(systemName: tone.iconName)
+            Image(systemName: symbolName)
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(tone.accentColor)
+                .foregroundStyle(symbolColor)
 
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.custom("Avenir Next Condensed", size: 20).weight(.semibold))
                 Text(message)
-                    .font(WorkspaceType.body)
+                    .font(.custom("Menlo", size: 12))
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
             }
 
@@ -70,11 +32,11 @@ struct StatusBannerView: View {
         .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(tone.accentColor.opacity(0.10))
+                .fill(backgroundColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(tone.accentColor.opacity(0.24), lineWidth: 1)
+                .stroke(borderColor, lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
     }
