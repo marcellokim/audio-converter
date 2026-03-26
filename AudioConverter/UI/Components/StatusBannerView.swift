@@ -14,45 +14,21 @@ struct StatusBannerView: View {
             case .blocked:
                 return "waveform.path.badge.minus"
             case .ready:
-                return "checkmark.seal"
+                return "checkmark.circle.fill"
             case .active:
-                return "arrow.triangle.2.circlepath.circle"
-            }
-        }
-
-        var label: String {
-            switch self {
-            case .checking:
-                return "Checking"
-            case .blocked:
-                return "Blocked"
-            case .ready:
-                return "Ready"
-            case .active:
-                return "Running"
-            }
-        }
-
-        var surfaceTone: WorkspaceSurfaceTone {
-            switch self {
-            case .checking:
-                return .muted
-            case .blocked:
-                return .critical
-            case .ready:
-                return .accent
-            case .active:
-                return .accent
+                return "arrow.triangle.2.circlepath.circle.fill"
             }
         }
 
         var accentColor: Color {
             switch self {
             case .checking:
-                return .secondary
+                return .orange
             case .blocked:
                 return .red
-            case .ready, .active:
+            case .ready:
+                return .accentColor
+            case .active:
                 return .accentColor
             }
         }
@@ -62,19 +38,25 @@ struct StatusBannerView: View {
     let message: String
     let tone: Tone
 
+    init(title: String, message: String, tone: Tone) {
+        self.title = title
+        self.message = message
+        self.tone = tone
+    }
+
+    init(title: String, message: String, isCritical: Bool) {
+        self.init(
+            title: title,
+            message: message,
+            tone: isCritical ? .blocked : .ready
+        )
+    }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .top, spacing: 14) {
             Image(systemName: tone.iconName)
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(tone.accentColor)
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Text(title)
-                        .font(WorkspaceType.sectionTitle)
-
-                    WorkspaceBadge(title: tone.label, tone: tone.surfaceTone)
-                }
 
                 Text(message)
                     .font(WorkspaceType.body)
@@ -85,7 +67,15 @@ struct StatusBannerView: View {
 
             Spacer(minLength: 0)
         }
-        .workspaceSurface(tone: tone.surfaceTone)
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(tone.accentColor.opacity(0.10))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(tone.accentColor.opacity(0.24), lineWidth: 1)
+        )
         .accessibilityElement(children: .combine)
     }
 
