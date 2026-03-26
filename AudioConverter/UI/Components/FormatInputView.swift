@@ -14,15 +14,24 @@ struct FormatInputView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Output format")
-                .font(.custom("Avenir Next Condensed", size: 24).weight(.semibold))
-            Text("Enter a registry-backed file extension. Supported values: \(suggestedFormats)")
-                .font(.custom("Menlo", size: 11))
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 16) {
+            WorkspaceSectionHeader(
+                eyebrow: "Format",
+                title: "Choose the output format",
+                message: "Use the registry-backed extension field or tap a quick chip. Invalid-format feedback still stays in the export panel."
+            )
+
+            HStack(spacing: 8) {
+                WorkspaceBadge(title: isEnabled ? "Editable" : "Locked", tone: isEnabled ? .accent : .muted)
+
+                if !normalizedSelection.isEmpty {
+                    WorkspaceBadge(title: normalizedSelection.uppercased(), tone: .muted)
+                }
+            }
+
             TextField("mp3", text: $outputFormat)
                 .textFieldStyle(.roundedBorder)
-                .font(.custom("Menlo", size: 14))
+                .font(WorkspaceType.detail)
                 .disabled(!isEnabled)
                 .accessibilityLabel("Output format")
 
@@ -33,7 +42,7 @@ struct FormatInputView: View {
                             outputFormat = format.id
                         } label: {
                             Text(format.id.uppercased())
-                                .font(.custom("Menlo", size: 11))
+                                .font(WorkspaceType.metric)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
                                 .background(chipBackground(for: format), in: Capsule())
@@ -50,12 +59,12 @@ struct FormatInputView: View {
                 .padding(.vertical, 1)
             }
 
-            if !isEnabled {
-                Text("Format changes pause while a conversion batch is running.")
-                    .font(.custom("Menlo", size: 11))
-                    .foregroundStyle(.secondary)
-            }
+            Text(isEnabled ? "Supported formats: \(suggestedFormats)" : "Format changes pause while a conversion or merge is running.")
+                .font(WorkspaceType.detail)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .workspaceSurface(tone: .standard)
     }
 
     private func chipBackground(for format: SupportedFormat) -> Color {

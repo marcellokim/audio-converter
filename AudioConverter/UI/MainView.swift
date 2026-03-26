@@ -263,15 +263,16 @@ struct MainView: View {
                     appState.operationMode = mode
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier(identifier)
             } else {
                 Button(title) {
                     appState.operationMode = mode
                 }
                 .buttonStyle(.bordered)
+                .accessibilityIdentifier(identifier)
             }
         }
         .disabled(appState.isConverting)
-        .accessibilityIdentifier(identifier)
     }
 
     private var isMergeMode: Bool {

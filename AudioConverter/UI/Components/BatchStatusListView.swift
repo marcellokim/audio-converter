@@ -4,50 +4,105 @@ struct BatchStatusListView: View {
     let snapshots: [BatchStatusSnapshot]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Batch status")
-                .font(.custom("Avenir Next Condensed", size: 24).weight(.semibold))
+        VStack(alignment: .leading, spacing: 16) {
+            WorkspaceSectionHeader(
+                eyebrow: "Batch status",
+                title: "Review queued, live, and completed items",
+                message: snapshots.isEmpty
+                    ? "The status rail stays compact until conversion or merge work begins."
+                    : "Each row keeps the filename, state, detail, and progress labels visible for quick scanning."
+            )
 
             if snapshots.isEmpty {
-                Text("Queued, running, skipped, cancelled, and completed items will appear here once conversion wiring is active.")
-                    .font(.custom("Menlo", size: 11))
-                    .foregroundStyle(.secondary)
+                emptyState
             } else {
                 summaryRow
 
-                ForEach(snapshots) { snapshot in
-                    HStack(alignment: .top, spacing: 12) {
-                        Capsule()
-                            .fill(color(for: snapshot.state))
-                            .frame(width: 8, height: 40)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(snapshot.fileName)
-                                .font(.custom("Hoefler Text", size: 20))
-                                .accessibilityIdentifier("batch-file-\(snapshot.fileName)")
-                            Text(snapshot.state.label.uppercased())
-                                .font(.custom("Menlo", size: 10))
-                                .foregroundStyle(color(for: snapshot.state))
-                                .accessibilityIdentifier("batch-state-\(snapshot.fileName)")
-                            if case .running = snapshot.state {
-                                progressView(for: snapshot)
-                            }
-                            Text(snapshot.displayedDetail)
-                                .font(.custom("Menlo", size: 11))
-                                .foregroundStyle(.secondary)
-                                .accessibilityIdentifier("batch-detail-\(snapshot.fileName)")
-                        }
-                        Spacer()
+                VStack(spacing: 12) {
+                    ForEach(snapshots) { snapshot in
+                        snapshotRow(snapshot)
                     }
-                    .padding(14)
-                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
+            }
+        }
+        .workspaceSurface(tone: .standard)
+    }
+
+    private var emptyState: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "list.bullet.clipboard")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("No batch activity yet")
+                    .font(WorkspaceType.bodyStrong)
+                Text("Queued, running, skipped, cancelled, and completed items will appear here once work starts.")
+                    .font(WorkspaceType.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .workspaceInsetSurface(tone: .muted)
+    }
+
+    private var summaryRow: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 8)], alignment: .leading, spacing: 8) {
+            ForEach(Array(summaryItems.enumerated()), id: \.offset) { entry in
+                let item = entry.element
+                Text("\(item.label) \(item.count)")
+                    .font(WorkspaceType.metric)
+                    .foregroundStyle(item.color)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(item.color.opacity(0.10), in: Capsule())
+                    .accessibilityIdentifier("batch-summary-\(item.label.lowercased())")
             }
         }
     }
 
+    private func snapshotRow(_ snapshot: BatchStatusSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                Circle()
+                    .fill(color(for: snapshot.state))
+                    .frame(width: 10, height: 10)
+                    .padding(.top, 5)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(snapshot.fileName)
+                        .font(WorkspaceType.bodyStrong)
+                        .accessibilityIdentifier("batch-file-\(snapshot.fileName)")
+                    Text(snapshot.state.label.uppercased())
+                        .font(WorkspaceType.metric)
+                        .foregroundStyle(color(for: snapshot.state))
+                        .accessibilityIdentifier("batch-state-\(snapshot.fileName)")
+                }
+
+                Spacer(minLength: 0)
+
+                WorkspaceBadge(title: snapshot.state.label, tone: tone(for: snapshot.state))
+            }
+
+            if case .running = snapshot.state {
+                progressView(for: snapshot)
+            }
+
+            Text(snapshot.displayedDetail)
+                .font(WorkspaceType.detail)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("batch-detail-\(snapshot.fileName)")
+        }
+        .workspaceInsetSurface(tone: tone(for: snapshot.state))
+    }
+
     @ViewBuilder
     private func progressView(for snapshot: BatchStatusSnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             if let value = snapshot.fractionCompleted {
                 ProgressView(value: value, total: 1)
                     .tint(color(for: snapshot.state))
@@ -59,7 +114,7 @@ struct BatchStatusListView: View {
             }
 
             Text(snapshot.progressPercentText ?? "LIVE")
-                .font(.custom("Menlo", size: 10))
+                .font(WorkspaceType.metric)
                 .foregroundStyle(color(for: snapshot.state))
                 .accessibilityIdentifier("batch-progress-label-\(snapshot.fileName)")
         }
@@ -113,18 +168,20 @@ struct BatchStatusListView: View {
         ].filter { $0.count > 0 }
     }
 
-    private var summaryRow: some View {
-        HStack(spacing: 8) {
-            ForEach(Array(summaryItems.enumerated()), id: \.offset) { entry in
-                let item = entry.element
-                Text("\(item.label) \(item.count)")
-                    .font(.custom("Menlo", size: 10))
-                    .foregroundStyle(item.color)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(item.color.opacity(0.10), in: Capsule())
-                    .accessibilityIdentifier("batch-summary-\(item.label.lowercased())")
-            }
+    private func tone(for state: ConversionItemState) -> WorkspaceSurfaceTone {
+        switch state {
+        case .queued:
+            return .muted
+        case .running:
+            return .accent
+        case .cancelled:
+            return .warning
+        case .succeeded:
+            return .accent
+        case .failed:
+            return .critical
+        case .skipped:
+            return .warning
         }
     }
 

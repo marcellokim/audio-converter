@@ -10,6 +10,20 @@ final class AudioConverterTests: XCTestCase {
         XCTAssertFalse(state.canStartConversion)
     }
 
+    func testMainViewLayoutUsesTwoZoneWorkspaceAtDefaultWindowWidth() {
+        let layout = MainViewLayout(windowWidth: 960)
+
+        XCTAssertEqual(layout.availableWidth, 912)
+        XCTAssertTrue(layout.prefersTwoColumn)
+    }
+
+    func testMainViewLayoutCollapsesAtMinimumWindowWidth() {
+        let layout = MainViewLayout(windowWidth: 720)
+
+        XCTAssertEqual(layout.availableWidth, 672)
+        XCTAssertFalse(layout.prefersTwoColumn)
+    }
+
     func testCanStartConversionIsTrueWhenFilesExistAndFormatIsNotBlank() {
         let state = makeReadyAppState()
         state.selectedFiles = [URL(fileURLWithPath: "/tmp/example.wav")]

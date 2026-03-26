@@ -23,6 +23,19 @@ final class AudioConverterUITests: XCTestCase {
         _ = waitForEnabledSelectFilesButton(in: app)
     }
 
+    func testLaunchKeepsSingleRootScrollViewAndUniquePrimaryControls() {
+        let app = makeApp(startupScenario: "always-ready")
+        app.launch()
+
+        _ = waitForEnabledSelectFilesButton(in: app)
+
+        XCTAssertEqual(app.scrollViews.count, 1)
+        XCTAssertEqual(app.buttons.matching(identifier: "select-files").count, 1)
+        XCTAssertEqual(app.buttons.matching(identifier: "mode-batch").count, 1)
+        XCTAssertEqual(app.buttons.matching(identifier: "mode-merge").count, 1)
+        XCTAssertEqual(app.buttons.matching(identifier: "start-conversion").count, 1)
+    }
+
     func testRetryStartupCheckButtonAppearsWhenStartupFails() {
         let app = makeApp(startupScenario: "always-fail")
         app.launch()
@@ -131,6 +144,24 @@ final class AudioConverterUITests: XCTestCase {
         let startMergeButton = app.buttons["start-merge"]
         XCTAssertTrue(startMergeButton.waitForExistence(timeout: 5))
         XCTAssertFalse(startMergeButton.isEnabled)
+    }
+
+    func testMergeModeKeepsUniqueSelectorsAfterStagingFiles() throws {
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "multiple"
+        )
+        app.launch()
+
+        let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
+        try enterMergeMode(in: app)
+        selectFilesButton.tap()
+
+        XCTAssertEqual(app.buttons.matching(identifier: "select-files").count, 1)
+        XCTAssertEqual(app.buttons.matching(identifier: "mode-merge").count, 1)
+        XCTAssertEqual(app.buttons.matching(identifier: "start-merge").count, 1)
+        XCTAssertEqual(app.buttons.matching(identifier: "select-merge-destination").count, 1)
+        XCTAssertEqual(stagedFileNames(in: app), ["ui-test-source-1.wav", "ui-test-source-2.aiff"])
     }
 
     func testMergeModeCanReorderStagedFiles() throws {
