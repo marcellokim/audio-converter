@@ -65,10 +65,10 @@ struct FileSelectionView: View {
                                     .lineLimit(1)
                                     .truncationMode(.middle)
                             }
-                            .layoutPriority(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             Spacer(minLength: 8)
-                            if isMergeMode {
-                                HStack(spacing: 8) {
+                            HStack(spacing: 8) {
+                                if isMergeMode {
                                     Button {
                                         onMoveUp(file)
                                     } label: {
@@ -89,20 +89,22 @@ struct FileSelectionView: View {
                                     .disabled(!canReorderFiles || index == files.count - 1)
                                     .accessibilityIdentifier("move-staged-file-down-\(file.displayName)")
                                 }
-                            }
-                            if canRemoveFiles {
-                                Button(role: .destructive) {
-                                    onRemove(file)
-                                } label: {
-                                    Label("Remove", systemImage: "xmark.circle.fill")
-                                        .labelStyle(.titleAndIcon)
+                                if canRemoveFiles {
+                                    Button(role: .destructive) {
+                                        onRemove(file)
+                                    } label: {
+                                        Label("Remove", systemImage: "xmark.circle.fill")
+                                            .labelStyle(.iconOnly)
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .accessibilityIdentifier("remove-staged-file-\(file.displayName)")
                                 }
-                                .buttonStyle(.borderless)
-                                .accessibilityIdentifier("remove-staged-file-\(file.displayName)")
                             }
+                            .fixedSize()
                         }
                         .padding(14)
                         .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
