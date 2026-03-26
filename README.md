@@ -14,6 +14,8 @@ This repository now contains:
 
 The conversion core is now verified against the vendored FFmpeg binary, and it now includes a serial batch-session seam with stable per-file snapshot IDs, `queued -> running -> succeeded/skipped/failed/cancelled` state transitions, batch-wide cancel handling, and temp-file cleanup for cancelled work. The current SwiftUI shell continues to run a launch-time ffmpeg self-check, expose an in-app retry path for startup failures, open the real macOS file picker, drive conversions through reusable status/file-selection/format/batch components, and ship DEBUG-only deterministic UI-test hooks around the file-selection seam so UI automation does not depend on a human-operated `NSOpenPanel`.
 
+The approved UI refresh keeps those behavioral seams intact while adding an adaptive workspace contract: one root `ScrollView`, a 960px two-zone layout, a 720px single-column fallback, consistent surface/type tokens, and stable singular accessibility identifiers. See `docs/uiux-workspace.md` for the review summary, selector contract, and verification checklist.
+
 ## Project structure
 - `project.yml`: XcodeGen project definition
 - `AudioConverter/App`: app entry point and shared app state
@@ -27,6 +29,7 @@ The conversion core is now verified against the vendored FFmpeg binary, and it n
 - `docs/distribution-signing.md`: signing and notarization notes
 - `docs/ffmpeg-provenance.md`: current FFmpeg development reference
 - `docs/notice-bundle/`: source-of-truth notice bundle assets
+- `docs/uiux-workspace.md`: adaptive SwiftUI workspace contract, selector constraints, and verification checklist
 
 ## Supported output formats in the current registry
 - `mp3`
