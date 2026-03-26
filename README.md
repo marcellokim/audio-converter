@@ -1,37 +1,82 @@
 # AudioConverter
 
-FFmpeg-based macOS batch audio converter for batch audio format conversion on macOS.
+AudioConverter is a macOS SwiftUI desktop app for batch audio conversion and ordered multi-file merging, powered by a vendored FFmpeg binary.
 
-## Current status
-This repository now contains:
-- XcodeGen project spec in `project.yml`
-- macOS SwiftUI app scaffold in `AudioConverter/`
-- unit, UI, and real-FFmpeg integration test coverage in `AudioConverterTests/` and `AudioConverterUITests/`
-- a vendored macOS `arm64` FFmpeg binary in `AudioConverter/Resources/ffmpeg/ffmpeg`
-- FFmpeg embed build script in `scripts/embed-ffmpeg.sh`
-- format registry, startup self-check, and conversion core files
-- distribution, provenance, licensing, and notice-bundle notes in `docs/`
+It is designed as a portfolio-quality product/code sample: a native Mac interface, clear state management, deterministic UI automation seams, and a tested FFmpeg execution pipeline.
 
-The conversion core is now verified against the vendored FFmpeg binary, and it now includes a serial batch-session seam with stable per-file snapshot IDs, `queued -> running -> succeeded/skipped/failed/cancelled` state transitions, batch-wide cancel handling, and temp-file cleanup for cancelled work. The current SwiftUI shell continues to run a launch-time ffmpeg self-check, expose an in-app retry path for startup failures, open the real macOS file picker, drive conversions through reusable status/file-selection/format/batch components, and ship DEBUG-only deterministic UI-test hooks around the file-selection seam so UI automation does not depend on a human-operated `NSOpenPanel`.
+## Highlights
 
-The approved UI refresh keeps those behavioral seams intact while adding an adaptive workspace contract: one root `ScrollView`, a 960px two-zone layout, a 720px single-column fallback, consistent surface/type tokens, and stable singular accessibility identifiers. See `docs/uiux-workspace.md` for the review summary, selector contract, and verification checklist.
+- **Native macOS app** built with **SwiftUI** and targeting **macOS 14.0 / Swift 5.10**
+- **Batch conversion workflow** for common audio formats including MP3, M4A, AAC, WAV, FLAC, AIFF, OPUS, and OGG
+- **Ordered merge workflow** that lets users stage multiple files, rearrange playback order, choose a destination, and export a single merged file
+- **Adaptive workspace UI** with a single root scroll surface, stable accessibility identifiers, and layout behavior tuned for both wide and compact window sizes
+- **Startup self-check + retry flow** for the bundled FFmpeg dependency
+- **Deterministic UI-test hooks** for file selection, save-panel flows, startup failures, and merge scenarios
+- **Real FFmpeg integration coverage** alongside unit and UI automation tests
 
-## Project structure
-- `project.yml`: XcodeGen project definition
-- `AudioConverter/App`: app entry point and shared app state
-- `AudioConverter/Core`: format registry, validation, FFmpeg command building, startup checks
-- `AudioConverter/Models`: core state and format models
-- `AudioConverter/UI`: current SwiftUI shell
-- `AudioConverterTests`: unit tests
-- `AudioConverterUITests`: UI smoke test
-- `scripts/embed-ffmpeg.sh`: copies vendored FFmpeg into the app bundle
-- `scripts/package-notice-bundle.sh`: stages the canonical `ThirdPartyNotices/` release packet
-- `docs/distribution-signing.md`: signing and notarization notes
-- `docs/ffmpeg-provenance.md`: current FFmpeg development reference
-- `docs/notice-bundle/`: source-of-truth notice bundle assets
-- `docs/uiux-workspace.md`: adaptive SwiftUI workspace contract, selector constraints, and verification checklist
+## Product overview
 
-## Supported output formats in the current registry
+AudioConverter currently supports two primary workflows:
+
+1. **Batch Convert**
+   Select one or more source files and export converted outputs beside the originals.
+
+2. **Merge into One**
+   Stage multiple files, adjust their playback order, choose a destination path, and create one merged output file.
+
+The latest UI refresh keeps both workflows inside one adaptive workspace instead of splitting behavior across multiple screens. This preserves a compact desktop experience while keeping staging, export controls, validation, and live progress distinct.
+
+## Engineering focus
+
+This project emphasizes:
+
+- **Brownfield-safe UI work**: stable selector contracts and non-duplicated interactive controls across adaptive layouts
+- **Clear app-state boundaries**: UI, session orchestration, FFmpeg command building, and platform adapters are separated into focused layers
+- **Testability**: deterministic hooks for UI automation and reusable seams around file selection, destination selection, startup checks, and conversion sessions
+- **Operational correctness**: serial batch execution, cancellation handling, cleanup of temporary outputs, and explicit snapshot-based progress reporting
+
+## Current implementation status
+
+As of **March 26, 2026**, the repository includes:
+
+- a generated Xcode project backed by **`project.yml`**
+- the SwiftUI app in **`AudioConverter/`**
+- unit tests, UI automation tests, and real-FFmpeg integration coverage in **`AudioConverterTests/`** and **`AudioConverterUITests/`**
+- a vendored macOS **arm64** FFmpeg binary at **`AudioConverter/Resources/ffmpeg/ffmpeg`**
+- scripts and documentation for FFmpeg provenance, distribution/signing, and notice-bundle packaging
+
+The current implementation is verified with:
+
+- startup self-check coverage for the bundled FFmpeg dependency
+- batch conversion tests from staging through completion/cancellation
+- merge-mode tests covering ordering, destination gating, and a single merged status row
+- adaptive UI selector checks that keep automation stable after layout changes
+
+## Architecture at a glance
+
+- **`AudioConverter/App`** — app entry point and shared app state
+- **`AudioConverter/Core`** — FFmpeg command building, conversion/merge execution, validation, and startup checks
+- **`AudioConverter/Models`** — domain models and batch snapshot state
+- **`AudioConverter/UI`** — SwiftUI views and reusable components
+- **`AudioConverter/UIAdapters`** — platform-facing seams such as open/save panel handling
+- **`AudioConverterTests`** — unit and integration-style coverage
+- **`AudioConverterUITests`** — XCUI automation coverage
+- **`docs/`** — FFmpeg provenance, notice bundle, release/signing notes, and UI workspace contract
+
+## Repository structure
+
+- `project.yml` — XcodeGen source of truth
+- `AudioConverter.xcodeproj` — generated Xcode project
+- `AudioConverter/Resources/ffmpeg/ffmpeg` — vendored FFmpeg executable
+- `scripts/embed-ffmpeg.sh` — embeds the vendored FFmpeg binary into the app bundle
+- `scripts/package-notice-bundle.sh` — stages the canonical `ThirdPartyNotices/` release packet
+- `docs/ffmpeg-provenance.md` — FFmpeg source/build provenance
+- `docs/distribution-signing.md` — signing and notarization notes
+- `docs/uiux-workspace.md` — adaptive workspace contract and selector constraints
+- `docs/notice-bundle/` — source-of-truth notice bundle assets
+
+## Supported output formats
+
 - `mp3`
 - `m4a`
 - `aac`
@@ -41,7 +86,8 @@ The approved UI refresh keeps those behavioral seams intact while adding an adap
 - `opus`
 - `ogg`
 
-## Build
+## Build and test
+
 Generate the Xcode project:
 
 ```bash
@@ -54,30 +100,32 @@ Build the app:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -scheme AudioConverter -destination 'platform=macOS' build
 ```
 
-Run tests:
+Run the full test suite:
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -scheme AudioConverter -destination 'platform=macOS' test
 ```
 
-Current verification note (2026-03-15): the vendored FFmpeg binary has been replaced with an LGPL-compatible local build from the official FFmpeg `8.0.1` source tarball, a fresh build succeeds, the real-FFmpeg integration test passes, and the full default scheme test run remains green.
+## Latest local verification
 
-## FFmpeg bundle expectation
-The build script embeds the vendored binary from:
+Verified on **March 26, 2026** with:
 
-```text
-AudioConverter/Resources/ffmpeg/ffmpeg
-```
+- `xcodebuild -scheme AudioConverter -destination 'platform=macOS' build`
+- `xcodebuild -scheme AudioConverter -destination 'platform=macOS' -only-testing:AudioConverterTests test`
+- `xcodebuild -scheme AudioConverter -destination 'platform=macOS' -only-testing:AudioConverterUITests test`
+- `xcodebuild -scheme AudioConverter -destination 'platform=macOS' test`
 
-The current vendored artifact is FFmpeg `8.0.1` for macOS `arm64`, built locally from the official FFmpeg source tarball. See `docs/ffmpeg-provenance.md` for the exact source URL, checksums, linked codec-library provenance, and the matching `ThirdPartyNotices/` bundle inputs.
+All of the above completed successfully in the local workspace.
 
-## Current release caveat
-- The vendored FFmpeg artifact is operationally present and verified for local conversion tests.
-- The old GPL-policy blocker is resolved for the current vendored build: its recorded build configuration omits `--enable-gpl` / `--enable-nonfree`, and `ffmpeg -L` reports LGPL `2.1 or later`.
-- The matching FFmpeg/LGPL + external-library notice bundle is now source-controlled under `docs/notice-bundle/` and staged with `scripts/package-notice-bundle.sh`.
-- Remaining release work is downstream packaging/signing/notarization automation for the final distributable.
+## FFmpeg and licensing notes
 
-## Next implementation milestones
-- package the final FFmpeg/LGPL + external-library notice bundle for distribution
-- finish release automation for nested executable signing and notarization
-- expand deterministic UI automation from file-selection/startup flows into end-to-end conversion-completion coverage
+The vendored FFmpeg artifact is currently an **LGPL-compatible local build of FFmpeg 8.0.1 for macOS arm64**. The recorded provenance, build context, and notice-bundle inputs live in:
+
+- `docs/ffmpeg-provenance.md`
+- `docs/notice-bundle/`
+
+## Current caveats / next steps
+
+- Distribution packaging, signing, and notarization still need to be finalized for a release-ready app package.
+- The repository is already suitable as a portfolio/code-review sample, but final shipping automation remains a follow-up task.
+- External desktop overlays can still slow UI automation in rare cases even when tests pass; the app-side selector/test seams remain stable.

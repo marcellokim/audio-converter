@@ -1,6 +1,33 @@
 import XCTest
 
 final class AudioConverterUITests: XCTestCase {
+    private var interruptionMonitor: NSObjectProtocol?
+
+    override func setUp() {
+        super.setUp()
+        continueAfterFailure = false
+        interruptionMonitor = addUIInterruptionMonitor(withDescription: "System dialogs") { alert in
+            let actionButtons = alert.buttons.matching(
+                NSPredicate(format: "identifier BEGINSWITH %@", "action-button-")
+            ).allElementsBoundByIndex
+
+            if let actionButton = actionButtons.first(where: \.exists) {
+                actionButton.tap()
+                return true
+            }
+
+            return false
+        }
+    }
+
+    override func tearDown() {
+        if let interruptionMonitor {
+            removeUIInterruptionMonitor(interruptionMonitor)
+        }
+        interruptionMonitor = nil
+        super.tearDown()
+    }
+
     func testLaunchShowsApplicationTitle() {
         let app = makeApp()
         app.launch()

@@ -67,8 +67,8 @@ struct FileSelectionView: View {
                             }
                             .layoutPriority(1)
                             Spacer(minLength: 8)
-                            if isMergeMode {
-                                HStack(spacing: 8) {
+                            HStack(spacing: 8) {
+                                if isMergeMode {
                                     Button {
                                         onMoveUp(file)
                                     } label: {

@@ -85,14 +85,15 @@ struct MainView: View {
             operationModeSection
 
             if isMergeMode {
+                mergeDestinationSection
+
+                primaryActionSection
+
                 FormatInputView(
                     outputFormat: $appState.outputFormat,
                     formats: FormatRegistry.allFormats,
                     isEnabled: !appState.isConverting
                 )
-
-                mergeDestinationSection
-                primaryActionSection
             } else {
                 primaryActionSection
 
@@ -161,29 +162,29 @@ struct MainView: View {
     }
 
     private var mergeDestinationSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            WorkspaceSectionHeader(
-                eyebrow: "Destination",
-                title: "Choose the merged export path",
-                message: "The merge flow keeps destination selection independent from the primary action so the blocked and ready states stay obvious."
-            )
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                WorkspaceSectionHeader(
+                    eyebrow: "Destination",
+                    title: "Choose the merged export path",
+                    message: "Choose the export location before starting the merge."
+                )
 
-            Button("Choose Destination", action: handleSelectMergeDestination)
-                .buttonStyle(.borderedProminent)
-                .disabled(!appState.canChooseMergeDestination)
-                .accessibilityIdentifier("select-merge-destination")
+                Spacer(minLength: 0)
+
+                Button("Choose Destination", action: handleSelectMergeDestination)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!appState.canChooseMergeDestination)
+                    .accessibilityIdentifier("select-merge-destination")
+            }
 
             if let mergeDestinationURL = appState.mergeDestinationURL {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(mergeDestinationURL.lastPathComponent)
-                        .font(WorkspaceType.bodyStrong)
-                        .accessibilityIdentifier("merge-destination-name")
-                    Text(mergeDestinationURL.deletingLastPathComponent().path)
-                        .font(WorkspaceType.detail)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
+                Text(mergeDestinationURL.lastPathComponent)
+                    .font(WorkspaceType.bodyStrong)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .accessibilityIdentifier("merge-destination-name")
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 .workspaceInsetSurface(tone: .muted)
             } else {
                 Text("No merge destination selected yet.")
@@ -196,11 +197,13 @@ struct MainView: View {
     }
 
     private var primaryActionSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: isMergeMode ? 10 : 16) {
             WorkspaceSectionHeader(
                 eyebrow: isMergeMode ? "Merge export" : "Batch export",
                 title: isMergeMode ? "Run the ordered merge" : "Run the conversion batch",
-                message: "Readiness, validation, and live progress stay separated so blocked states do not crowd the main CTA row."
+                message: isMergeMode
+                    ? "Start the merge once the staged files and destination are ready."
+                    : "Readiness, validation, and live progress stay separated so blocked states do not crowd the main CTA row."
             )
 
             ViewThatFits(in: .horizontal) {
@@ -213,11 +216,13 @@ struct MainView: View {
                 }
             }
 
-            statusCallout(
-                title: "Readiness",
-                message: readinessMessage,
-                tone: .muted
-            )
+            if !isMergeMode || appState.isConverting || !canStartPrimaryAction {
+                statusCallout(
+                    title: "Readiness",
+                    message: readinessMessage,
+                    tone: .muted
+                )
+            }
 
             if case let .invalidFormat(rawInput) = validationState {
                 statusCallout(
@@ -227,12 +232,14 @@ struct MainView: View {
                 )
             }
 
-            statusCallout(
-                title: "Live status",
-                message: appState.statusMessage,
-                tone: appState.isConverting ? .accent : .standard,
-                identifier: "status-message"
-            )
+            if !isMergeMode || appState.isConverting || !canStartPrimaryAction {
+                statusCallout(
+                    title: "Live status",
+                    message: appState.statusMessage,
+                    tone: appState.isConverting ? .accent : .standard,
+                    identifier: "status-message"
+                )
+            }
         }
         .workspaceSurface(tone: .standard)
     }
