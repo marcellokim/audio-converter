@@ -4,17 +4,38 @@ struct MainView: View {
     @EnvironmentObject private var appState: AppState
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                header
-                operationModePicker
+        GeometryReader { proxy in
+            let layout = MainViewLayout(windowWidth: proxy.size.width)
 
-                StatusBannerView(
-                    title: bannerTitle,
-                    message: bannerMessage,
-                    isCritical: appState.startupError != nil
-                )
+            ScrollView {
+                VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
+                    header
 
+                    StatusBannerView(
+                        title: bannerTitle,
+                        message: bannerMessage,
+                        tone: bannerTone
+                    )
+
+                    workspace(for: layout)
+                }
+                .padding(WorkspaceChrome.pagePadding)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func workspace(for layout: MainViewLayout) -> some View {
+        if layout.prefersTwoColumn {
+            HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
+                primaryLane
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                secondaryLane
+                    .frame(width: min(max(layout.availableWidth * 0.38, 300), 360), alignment: .leading)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
                 FileSelectionView(
                     files: appState.selectedAudioFiles,
                     action: handleSelectFiles,
@@ -27,63 +48,148 @@ struct MainView: View {
                     isMergeMode: isMergeMode
                 )
 
-                FormatInputView(
-                    outputFormat: $appState.outputFormat,
-                    formats: FormatRegistry.allFormats,
-                    isEnabled: !appState.isConverting
-                )
-
-                primaryActionSection
+                secondaryLane
 
                 BatchStatusListView(snapshots: appState.batchSnapshots)
             }
-            .padding(24)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var primaryLane: some View {
+        VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
+            FileSelectionView(
+                files: appState.selectedAudioFiles,
+                action: handleSelectFiles,
+                onRemove: handleRemoveSelectedFile,
+                onMoveUp: handleMoveSelectedFileUp,
+                onMoveDown: handleMoveSelectedFileDown,
+                canBrowseFiles: appState.canOpenFiles,
+                canRemoveFiles: appState.canRemoveSelectedFiles,
+                canReorderFiles: appState.canReorderSelectedFiles,
+                isMergeMode: isMergeMode
+            )
+
+            BatchStatusListView(snapshots: appState.batchSnapshots)
+        }
+    }
+
+    private var secondaryLane: some View {
+        VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
+            operationModeSection
+
+            FormatInputView(
+                outputFormat: $appState.outputFormat,
+                formats: FormatRegistry.allFormats,
+                isEnabled: !appState.isConverting
+            )
+
+            if isMergeMode {
+                mergeDestinationSection
+            }
+
+            primaryActionSection
         }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("AudioConverter")
-                .font(.largeTitle.weight(.semibold))
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("AudioConverter")
+                        .font(WorkspaceType.display)
 
-            Text("Batch convert audio or stage files in a deliberate order and merge them into one export with the bundled ffmpeg runtime.")
+                    Text("Batch convert audio or stage a deliberate order for one merged export, all inside a single adaptive workspace.")
+                        .font(WorkspaceType.body)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                WorkspaceBadge(
+                    title: appState.isConverting
+                        ? (isMergeMode ? "Merge in flight" : "Batch in flight")
+                        : (isMergeMode ? "Merge studio" : "Batch studio"),
+                    tone: appState.isConverting ? .accent : .muted
+                )
+            }
+
+            Text("The window keeps one scroll surface, stable selectors, and clearer separation between staging, export controls, and live status.")
+                .font(WorkspaceType.detail)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .workspaceSurface(tone: .standard)
     }
 
-    private var operationModePicker: some View {
-        HStack(spacing: 10) {
-            modeButton(
-                title: "Batch Convert",
-                mode: .batchConvert,
-                identifier: "mode-batch"
+    private var operationModeSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            WorkspaceSectionHeader(
+                eyebrow: "Workflow",
+                title: "Choose the session type",
+                message: "Switch between per-file conversion and one ordered merge without duplicating any interactive controls."
             )
-            modeButton(
-                title: "Merge into One",
-                mode: .mergeIntoOne,
-                identifier: "mode-merge"
-            )
+
+            HStack(spacing: 10) {
+                modeButton(
+                    title: "Batch Convert",
+                    mode: .batchConvert,
+                    identifier: "mode-batch"
+                )
+                modeButton(
+                    title: "Merge into One",
+                    mode: .mergeIntoOne,
+                    identifier: "mode-merge"
+                )
+            }
         }
+        .workspaceSurface(tone: .standard)
+    }
+
+    private var mergeDestinationSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            WorkspaceSectionHeader(
+                eyebrow: "Destination",
+                title: "Choose the merged export path",
+                message: "The merge flow keeps destination selection independent from the primary action so the blocked and ready states stay obvious."
+            )
+
+            Button("Choose Destination", action: handleSelectMergeDestination)
+                .buttonStyle(.borderedProminent)
+                .disabled(!appState.canChooseMergeDestination)
+                .accessibilityIdentifier("select-merge-destination")
+
+            if let mergeDestinationURL = appState.mergeDestinationURL {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(mergeDestinationURL.lastPathComponent)
+                        .font(WorkspaceType.bodyStrong)
+                        .accessibilityIdentifier("merge-destination-name")
+                    Text(mergeDestinationURL.deletingLastPathComponent().path)
+                        .font(WorkspaceType.detail)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                .workspaceInsetSurface(tone: .muted)
+            } else {
+                Text("No merge destination selected yet.")
+                    .font(WorkspaceType.detail)
+                    .foregroundStyle(.secondary)
+                    .workspaceInsetSurface(tone: .muted)
+            }
+        }
+        .workspaceSurface(tone: .standard)
     }
 
     private var primaryActionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                if isMergeMode {
-                    Button("Choose Destination", action: handleSelectMergeDestination)
-                        .buttonStyle(.bordered)
-                        .disabled(!appState.canChooseMergeDestination)
-                        .accessibilityIdentifier("select-merge-destination")
+        VStack(alignment: .leading, spacing: 16) {
+            WorkspaceSectionHeader(
+                eyebrow: isMergeMode ? "Merge export" : "Batch export",
+                title: isMergeMode ? "Run the ordered merge" : "Run the conversion batch",
+                message: "Readiness, validation, and live progress stay separated so blocked states do not crowd the main CTA row."
+            )
 
-                    if let mergeDestinationURL = appState.mergeDestinationURL {
-                        Text(mergeDestinationURL.lastPathComponent)
-                            .font(.custom("Menlo", size: 11))
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("merge-destination-name")
-                    }
-                }
-
+            HStack(spacing: 10) {
                 Button(primaryActionTitle, action: handleStartPrimaryAction)
                     .buttonStyle(.borderedProminent)
                     .disabled(!canStartPrimaryAction)
@@ -101,23 +207,49 @@ struct MainView: View {
                         .buttonStyle(.bordered)
                         .accessibilityIdentifier("retry-startup-check")
                 }
-
-                Text(readinessMessage)
-                    .font(.custom("Menlo", size: 11))
-                    .foregroundStyle(.secondary)
             }
+
+            statusCallout(
+                title: "Readiness",
+                message: readinessMessage,
+                tone: .muted
+            )
 
             if case let .invalidFormat(rawInput) = validationState {
-                Text(invalidFormatMessage(for: rawInput))
-                    .font(.custom("Menlo", size: 11))
-                    .foregroundStyle(.orange)
+                statusCallout(
+                    title: "Format check",
+                    message: invalidFormatMessage(for: rawInput),
+                    tone: .warning
+                )
             }
 
-            Text(appState.statusMessage)
-                .font(.custom("Menlo", size: 11))
-                .foregroundStyle(.secondary)
-                .accessibilityIdentifier("status-message")
+            statusCallout(
+                title: "Live status",
+                message: appState.statusMessage,
+                tone: appState.isConverting ? .accent : .standard,
+                identifier: "status-message"
+            )
         }
+        .workspaceSurface(tone: .standard)
+    }
+
+    private func statusCallout(
+        title: String,
+        message: String,
+        tone: WorkspaceSurfaceTone,
+        identifier: String? = nil
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(WorkspaceType.caption)
+                .foregroundStyle(.secondary)
+            Text(message)
+                .font(WorkspaceType.detail)
+                .foregroundStyle(tone == .warning ? Color.orange : .secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .applyAccessibilityIdentifier(identifier)
+        }
+        .workspaceInsetSurface(tone: tone)
     }
 
     private func modeButton(
@@ -125,19 +257,10 @@ struct MainView: View {
         mode: AppState.OperationMode,
         identifier: String
     ) -> some View {
-        Group {
-            if mode == appState.operationMode {
-                Button(title) {
-                    appState.operationMode = mode
-                }
-                .buttonStyle(.borderedProminent)
-            } else {
-                Button(title) {
-                    appState.operationMode = mode
-                }
-                .buttonStyle(.bordered)
-            }
+        Button(title) {
+            appState.operationMode = mode
         }
+        .buttonStyle(mode == appState.operationMode ? .borderedProminent : .bordered)
         .disabled(appState.isConverting)
         .accessibilityIdentifier(identifier)
     }
@@ -180,6 +303,17 @@ struct MainView: View {
 
     private var cancelActionIdentifier: String {
         isMergeMode ? "cancel-merge" : "cancel-conversion"
+    }
+
+    private var bannerTone: StatusBannerView.Tone {
+        switch appState.startupState {
+        case .idle, .checking:
+            return .checking
+        case .startupError:
+            return .blocked
+        case .ready:
+            return appState.isConverting ? .active : .ready
+        }
     }
 
     private var bannerTitle: String {
@@ -225,9 +359,7 @@ struct MainView: View {
             return message
         case .ready:
             if appState.isConverting, let format = selectedFormat {
-                let verb = appState.isCancelling
-                    ? (isMergeMode ? "Cancelling" : "Cancelling")
-                    : (isMergeMode ? "Merging" : "Rendering")
+                let verb = isMergeMode ? "Merging" : "Rendering"
                 return "\(verb) \(appState.selectedAudioFiles.count) file(s) to \(format.displayName). \(appState.statusMessage)"
             }
 
@@ -241,7 +373,7 @@ struct MainView: View {
                 }
 
                 if appState.selectedAudioFiles.isEmpty {
-                    return "The UI shell is loaded and waiting for files to render as \(format.displayName)."
+                    return "The workspace is ready and waiting for files to render as \(format.displayName)."
                 }
 
                 return "\(appState.selectedAudioFiles.count) file(s) are staged for \(format.displayName). \(appState.statusMessage)"
@@ -336,5 +468,189 @@ struct MainView: View {
 
     private func handleRetryStartupChecks() {
         appState.retryStartupChecks()
+    }
+}
+
+struct MainViewLayout: Equatable {
+    static let wideBreakpoint: CGFloat = 880
+
+    let windowWidth: CGFloat
+    let availableWidth: CGFloat
+
+    init(windowWidth: CGFloat) {
+        self.windowWidth = windowWidth
+        self.availableWidth = max(windowWidth - (WorkspaceChrome.pagePadding * 2), 0)
+    }
+
+    var prefersTwoColumn: Bool {
+        availableWidth >= Self.wideBreakpoint
+    }
+}
+
+enum WorkspaceChrome {
+    static let pagePadding: CGFloat = 24
+    static let pageSpacing: CGFloat = 20
+    static let surfacePadding: CGFloat = 20
+    static let insetPadding: CGFloat = 14
+    static let surfaceRadius: CGFloat = 22
+    static let insetRadius: CGFloat = 16
+}
+
+enum WorkspaceType {
+    static let display = Font.system(size: 32, weight: .semibold, design: .rounded)
+    static let sectionTitle = Font.system(size: 21, weight: .semibold, design: .rounded)
+    static let bodyStrong = Font.system(size: 15, weight: .semibold, design: .rounded)
+    static let body = Font.system(size: 14, weight: .regular, design: .rounded)
+    static let detail = Font.system(size: 12, weight: .medium, design: .monospaced)
+    static let caption = Font.system(size: 11, weight: .semibold, design: .rounded)
+    static let metric = Font.system(size: 11, weight: .semibold, design: .monospaced)
+}
+
+enum WorkspaceSurfaceTone {
+    case standard
+    case accent
+    case muted
+    case warning
+    case critical
+
+    var fillColor: Color {
+        switch self {
+        case .standard:
+            return Color.primary.opacity(0.045)
+        case .accent:
+            return Color.accentColor.opacity(0.10)
+        case .muted:
+            return Color.primary.opacity(0.028)
+        case .warning:
+            return Color.orange.opacity(0.10)
+        case .critical:
+            return Color.red.opacity(0.11)
+        }
+    }
+
+    var strokeColor: Color {
+        switch self {
+        case .standard:
+            return Color.primary.opacity(0.08)
+        case .accent:
+            return Color.accentColor.opacity(0.24)
+        case .muted:
+            return Color.primary.opacity(0.05)
+        case .warning:
+            return Color.orange.opacity(0.22)
+        case .critical:
+            return Color.red.opacity(0.24)
+        }
+    }
+}
+
+struct WorkspaceSectionHeader: View {
+    let eyebrow: String?
+    let title: String
+    let message: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let eyebrow {
+                Text(eyebrow)
+                    .font(WorkspaceType.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(title)
+                .font(WorkspaceType.sectionTitle)
+
+            Text(message)
+                .font(WorkspaceType.body)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+struct WorkspaceBadge: View {
+    let title: String
+    let tone: WorkspaceSurfaceTone
+
+    var body: some View {
+        Text(title)
+            .font(WorkspaceType.caption)
+            .foregroundStyle(textColor)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(tone.fillColor, in: Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(tone.strokeColor, lineWidth: 1)
+            )
+    }
+
+    private var textColor: Color {
+        switch tone {
+        case .warning:
+            return .orange
+        case .critical:
+            return .red
+        case .accent:
+            return .accentColor
+        case .standard, .muted:
+            return .secondary
+        }
+    }
+}
+
+private struct WorkspaceSurfaceModifier: ViewModifier {
+    let tone: WorkspaceSurfaceTone
+    let padding: CGFloat
+    let radius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(tone.fillColor)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(tone.strokeColor, lineWidth: 1)
+            )
+    }
+}
+
+extension View {
+    func workspaceSurface(
+        tone: WorkspaceSurfaceTone = .standard,
+        padding: CGFloat = WorkspaceChrome.surfacePadding
+    ) -> some View {
+        modifier(
+            WorkspaceSurfaceModifier(
+                tone: tone,
+                padding: padding,
+                radius: WorkspaceChrome.surfaceRadius
+            )
+        )
+    }
+
+    func workspaceInsetSurface(
+        tone: WorkspaceSurfaceTone = .muted,
+        padding: CGFloat = WorkspaceChrome.insetPadding
+    ) -> some View {
+        modifier(
+            WorkspaceSurfaceModifier(
+                tone: tone,
+                padding: padding,
+                radius: WorkspaceChrome.insetRadius
+            )
+        )
+    }
+
+    @ViewBuilder
+    func applyAccessibilityIdentifier(_ identifier: String?) -> some View {
+        if let identifier {
+            accessibilityIdentifier(identifier)
+        } else {
+            self
+        }
     }
 }
