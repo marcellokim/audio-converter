@@ -28,11 +28,11 @@ struct MainView: View {
     @ViewBuilder
     private func workspace(for layout: MainViewLayout) -> some View {
         if layout.prefersTwoColumn {
-            let secondaryWidth = min(max(layout.availableWidth * 0.28, 220), 250)
+            let secondaryWidth = min(max(layout.availableWidth * 0.34, 280), 320)
             HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
                 primaryLane
                     .frame(
-                        width: max(layout.availableWidth - secondaryWidth - WorkspaceChrome.pageSpacing, 320),
+                        width: max(layout.availableWidth - secondaryWidth - WorkspaceChrome.pageSpacing, 280),
                         alignment: .leading
                     )
                     .layoutPriority(1)
