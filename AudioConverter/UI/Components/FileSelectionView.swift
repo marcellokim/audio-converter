@@ -55,13 +55,18 @@ struct FileSelectionView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(file.displayName)
                                     .font(.custom("Hoefler Text", size: 19))
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
                                     .accessibilityLabel(file.displayName)
                                     .accessibilityIdentifier("staged-file-name-\(file.displayName)")
                                 Text(file.directoryURL.path)
                                     .font(.custom("Menlo", size: 10))
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
+                                    .truncationMode(.middle)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .layoutPriority(1)
                             Spacer()
                             if isMergeMode {
                                 HStack(spacing: 8) {

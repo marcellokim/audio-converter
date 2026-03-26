@@ -28,12 +28,16 @@ struct MainView: View {
     @ViewBuilder
     private func workspace(for layout: MainViewLayout) -> some View {
         if layout.prefersTwoColumn {
+            let secondaryWidth = min(max(layout.availableWidth * 0.30, 240), 280)
             HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
                 primaryLane
-                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    .frame(
+                        width: max(layout.availableWidth - secondaryWidth - WorkspaceChrome.pageSpacing, 320),
+                        alignment: .leading
+                    )
                     .layoutPriority(1)
                 secondaryLane
-                    .frame(width: min(max(layout.availableWidth * 0.30, 240), 300), alignment: .leading)
+                    .frame(width: secondaryWidth, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } else {
@@ -265,15 +269,16 @@ struct MainView: View {
                     appState.operationMode = mode
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier(identifier)
             } else {
                 Button(title) {
                     appState.operationMode = mode
                 }
                 .buttonStyle(.bordered)
+                .accessibilityIdentifier(identifier)
             }
         }
         .disabled(appState.isConverting)
-        .accessibilityIdentifier(identifier)
     }
 
     private var isMergeMode: Bool {
@@ -483,7 +488,7 @@ struct MainView: View {
 }
 
 struct MainViewLayout: Equatable {
-    static let wideBreakpoint: CGFloat = 840
+    static let wideBreakpoint: CGFloat = 900
 
     let windowWidth: CGFloat
     let availableWidth: CGFloat
