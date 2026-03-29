@@ -107,6 +107,52 @@ Run the full test suite:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -scheme AudioConverter -destination 'platform=macOS' test
 ```
 
+## Run locally
+
+### Option 1 — Run from Xcode
+1. Generate the project if needed:
+   ```bash
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer /opt/homebrew/bin/xcodegen generate
+   ```
+2. Open `AudioConverter.xcodeproj` in Xcode.
+3. Select the **AudioConverter** scheme.
+4. Choose **My Mac** as the run destination.
+5. Press **Run**.
+
+### Option 2 — Run from Terminal
+Build a local Debug app bundle into the repo `build/` directory:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -project AudioConverter.xcodeproj \
+  -scheme AudioConverter \
+  -configuration Debug \
+  SYMROOT=build \
+  build
+```
+
+Launch the built app:
+
+```bash
+open build/Debug/AudioConverter.app
+```
+
+### Optional release-lane rehearsal
+If you want to rehearse the direct-download release packaging flow locally without Apple signing credentials:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -project AudioConverter.xcodeproj \
+  -scheme AudioConverter \
+  -configuration Release \
+  SYMROOT=build \
+  build
+
+scripts/release-sign-and-notarize.sh \
+  --mode rehearse \
+  --app build/Release/AudioConverter.app
+```
+
 ## Latest local verification
 
 Verified on **March 29, 2026** with:
