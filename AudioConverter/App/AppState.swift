@@ -7,6 +7,9 @@ protocol BatchConversionSessioning: AnyObject {
 
 extension ConversionCoordinatorSession: BatchConversionSessioning {}
 final class AppState: ObservableObject {
+    private static let preferredFormatDefaultsKey = "AudioConverter.preferredFormat"
+    private static let preferredOperationModeDefaultsKey = "AudioConverter.preferredOperationMode"
+
     enum FFmpegResolution {
         case ready(URL)
         case failure(String)
@@ -47,12 +50,14 @@ final class AppState: ObservableObject {
 
     @Published var outputFormat: String = "mp3" {
         didSet {
+            preferencesStore.set(outputFormat, forKey: Self.preferredFormatDefaultsKey)
             refreshStatusMessageForCurrentInputs()
         }
     }
 
     @Published var operationMode: OperationMode = .batchConvert {
         didSet {
+            preferencesStore.set(operationMode.rawValue, forKey: Self.preferredOperationModeDefaultsKey)
             guard operationMode != oldValue else {
                 return
             }
@@ -76,6 +81,7 @@ final class AppState: ObservableObject {
     private let selectMergeDestinationURL: MergeDestinationSelector
     private let makeConversionSession: ConversionSessionFactory
     private let makeMergeSession: MergeSessionFactory
+    private let preferencesStore: UserDefaults
 
     private var ffmpegURL: URL?
     private var hasPerformedStartupChecks = false
@@ -91,6 +97,7 @@ final class AppState: ObservableObject {
                 suggestedBaseName: files.first?.url.deletingPathExtension().lastPathComponent ?? "merged-audio"
             )
         },
+        preferencesStore: UserDefaults = .standard,
         makeConversionSession: @escaping ConversionSessionFactory = { files, format, ffmpegURL, onUpdate, onCompletion in
             ConversionCoordinator().makeSession(
                 files: files,
@@ -115,8 +122,11 @@ final class AppState: ObservableObject {
         self.validateStartupCapabilities = validateStartupCapabilities
         self.selectAudioFiles = selectAudioFiles
         self.selectMergeDestinationURL = selectMergeDestinationURL
+        self.preferencesStore = preferencesStore
         self.makeConversionSession = makeConversionSession
         self.makeMergeSession = makeMergeSession
+        self.outputFormat = Self.restorePreferredFormat(from: preferencesStore)
+        self.operationMode = Self.restorePreferredOperationMode(from: preferencesStore)
     }
 
     var selectedAudioFiles: [SelectedAudioFile] {
@@ -347,6 +357,17 @@ final class AppState: ObservableObject {
 
         clearBatchSnapshotsForSelectionMutation()
         selectedFiles.removeAll { $0 == file.url }
+    }
+
+    func clearAllFiles() {
+        guard canRemoveSelectedFiles else {
+            return
+        }
+
+        clearBatchSnapshotsForSelectionMutation()
+        selectedFiles = []
+        mergeDestinationURL = nil
+        refreshStatusMessageForCurrentInputs()
     }
 
     func moveSelectedFileUp(_ file: SelectedAudioFile) {
@@ -620,6 +641,22 @@ final class AppState: ObservableObject {
                 statusMessage = "Choose a destination for the merged \(format.displayName) file."
             }
         }
+    }
+
+    private static func restorePreferredFormat(from preferencesStore: UserDefaults) -> String {
+        let storedFormat = preferencesStore.string(forKey: preferredFormatDefaultsKey) ?? "mp3"
+        return storedFormat.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "mp3" : storedFormat
+    }
+
+    private static func restorePreferredOperationMode(from preferencesStore: UserDefaults) -> OperationMode {
+        guard
+            let storedValue = preferencesStore.string(forKey: preferredOperationModeDefaultsKey),
+            let mode = OperationMode(rawValue: storedValue)
+        else {
+            return .batchConvert
+        }
+
+        return mode
     }
 
     private func makeCompletionStatusMessage(for snapshots: [BatchStatusSnapshot], format: SupportedFormat) -> String {

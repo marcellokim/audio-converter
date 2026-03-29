@@ -4,6 +4,7 @@ struct FileSelectionView: View {
     let files: [SelectedAudioFile]
     let action: () -> Void
     let onRemove: (SelectedAudioFile) -> Void
+    let onClearAll: () -> Void
     let onMoveUp: (SelectedAudioFile) -> Void
     let onMoveDown: (SelectedAudioFile) -> Void
     let canBrowseFiles: Bool
@@ -13,7 +14,7 @@ struct FileSelectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(isMergeMode ? "Ordered source files" : "Source files")
                         .font(WorkspaceType.sectionTitle)
@@ -26,10 +27,19 @@ struct FileSelectionView: View {
                     .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Select Files", action: action)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!canBrowseFiles)
-                    .accessibilityIdentifier("select-files")
+                VStack(alignment: .trailing, spacing: 8) {
+                    Button("Select Files", action: action)
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!canBrowseFiles)
+                        .accessibilityIdentifier("select-files")
+
+                    if !files.isEmpty && canRemoveFiles {
+                        Button("Clear All", action: onClearAll)
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .accessibilityIdentifier("clear-files")
+                    }
+                }
             }
 
             Text(helperText)
@@ -37,11 +47,35 @@ struct FileSelectionView: View {
                 .foregroundStyle(.secondary)
 
             if files.isEmpty {
-                Text("No source files selected yet.")
-                    .font(WorkspaceType.bodyStrong)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Quick Start")
+                        .font(WorkspaceType.bodyStrong)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        quickStartStep(
+                            number: 1,
+                            text: canBrowseFiles
+                                ? (isMergeMode ? "Select two or more source files." : "Select one or more source files.")
+                                : "Wait for the bundled ffmpeg startup check to finish."
+                        )
+                        quickStartStep(number: 2, text: "Choose an output format.")
+                        quickStartStep(
+                            number: 3,
+                            text: isMergeMode
+                                ? "Choose the merge destination, then start the export."
+                                : "Start the conversion batch."
+                        )
+                    }
+
+                    Text(canBrowseFiles
+                        ? "The workspace will keep the next required action visible as you progress."
+                        : "If startup checks fail, use the Retry Startup Check control in the action panel before trying again.")
+                        .font(WorkspaceType.detail)
+                        .foregroundStyle(.secondary)
+                }
                     .frame(maxWidth: .infinity, minHeight: 108 - WorkspaceChrome.insetPadding * 2, alignment: .leading)
                     .workspaceInsetSurface(tone: .muted)
+                    .accessibilityIdentifier("quick-start-card")
             } else {
                 VStack(spacing: 10) {
                     ForEach(Array(files.enumerated()), id: \.element.id) { index, file in
@@ -119,5 +153,17 @@ struct FileSelectionView: View {
         return isMergeMode
             ? "\(files.count) file(s) staged in playback order."
             : "\(files.count) file(s) staged. Converted outputs stay beside each original file."
+    }
+
+    private func quickStartStep(number: Int, text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("\(number).")
+                .font(WorkspaceType.bodyStrong)
+                .foregroundStyle(Color.accentColor)
+            Text(text)
+                .font(WorkspaceType.body)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

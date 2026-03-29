@@ -50,6 +50,15 @@ final class AudioConverterUITests: XCTestCase {
         _ = waitForEnabledSelectFilesButton(in: app)
     }
 
+    func testLaunchShowsQuickStartCardWhileNoFilesAreStaged() {
+        let app = makeApp(startupScenario: "always-ready")
+        app.launch()
+
+        _ = waitForEnabledSelectFilesButton(in: app)
+
+        XCTAssertTrue(app.staticTexts["Quick Start"].exists)
+    }
+
     func testLaunchKeepsSingleRootScrollViewAndUniquePrimaryControls() {
         let app = makeApp(startupScenario: "always-ready")
         app.launch()
@@ -152,6 +161,27 @@ final class AudioConverterUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["ui-test-source-1.wav"].exists)
         XCTAssertTrue(app.staticTexts["ui-test-source-2.aiff"].exists)
         XCTAssertTrue(app.buttons["start-conversion"].isEnabled)
+    }
+
+    func testClearAllRemovesLoadedFilesAndDisablesConversion() {
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "multiple"
+        )
+        app.launch()
+
+        let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
+        selectFilesButton.tap()
+
+        let clearButton = app.buttons["clear-files"]
+        XCTAssertTrue(clearButton.waitForExistence(timeout: 5))
+        waitForHittable(clearButton)
+        clearButton.tap()
+
+        XCTAssertFalse(app.staticTexts["ui-test-source-1.wav"].exists)
+        XCTAssertFalse(app.staticTexts["ui-test-source-2.aiff"].exists)
+        XCTAssertFalse(app.buttons["start-conversion"].isEnabled)
+        XCTAssertTrue(app.staticTexts["Quick Start"].exists)
     }
 
     func testMergeModeKeepsPrimaryActionDisabledUntilDestinationIsSelected() throws {

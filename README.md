@@ -67,10 +67,13 @@ The current implementation is verified with:
 
 - `project.yml` — XcodeGen source of truth
 - `AudioConverter.xcodeproj` — generated Xcode project
+- `AudioConverter/Config/Release.entitlements` — explicit release entitlements policy used by the signing/notarization lane
 - `AudioConverter/Resources/ffmpeg/ffmpeg` — vendored FFmpeg executable
 - `scripts/embed-ffmpeg.sh` — embeds the vendored FFmpeg binary into the app bundle
 - `scripts/package-notice-bundle.sh` — stages the canonical `ThirdPartyNotices/` release packet
 - `scripts/release-sign-and-notarize.sh` — stages notices, signs the helper/app bundle, and drives notarization for the zipped release artifact
+- `scripts/run-local.sh` — generates the project, builds Debug, and launches the app locally
+- `scripts/rehearse-release.sh` — builds Release and runs the local release-lane rehearsal
 - `docs/ffmpeg-provenance.md` — FFmpeg source/build provenance
 - `docs/distribution-signing.md` — signing and notarization notes
 - `docs/uiux-workspace.md` — adaptive workspace contract and selector constraints
@@ -109,6 +112,11 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -scheme Audi
 
 ## Run locally
 
+### Fastest path
+```bash
+scripts/run-local.sh
+```
+
 ### Option 1 — Run from Xcode
 1. Generate the project if needed:
    ```bash
@@ -141,16 +149,7 @@ open build/Debug/AudioConverter.app
 If you want to rehearse the direct-download release packaging flow locally without Apple signing credentials:
 
 ```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-  xcodebuild -project AudioConverter.xcodeproj \
-  -scheme AudioConverter \
-  -configuration Release \
-  SYMROOT=build \
-  build
-
-scripts/release-sign-and-notarize.sh \
-  --mode rehearse \
-  --app build/Release/AudioConverter.app
+scripts/rehearse-release.sh
 ```
 
 ## Latest local verification

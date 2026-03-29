@@ -214,6 +214,52 @@ final class AudioConverterTests: XCTestCase {
         XCTAssertFalse(state.canRemoveSelectedFiles)
     }
 
+    func testClearAllFilesRemovesSelectionAndMergeDestination() {
+        let state = makeReadyAppState(
+            selectMergeDestinationURL: { _, _ in
+                URL(fileURLWithPath: "/tmp/merged-output.mp3")
+            }
+        )
+        state.operationMode = .mergeIntoOne
+        state.selectedFiles = [
+            URL(fileURLWithPath: "/tmp/voice-note.wav"),
+            URL(fileURLWithPath: "/tmp/session.aiff")
+        ]
+        state.outputFormat = "mp3"
+        state.selectMergeDestination()
+
+        state.clearAllFiles()
+
+        XCTAssertTrue(state.selectedFiles.isEmpty)
+        XCTAssertNil(state.mergeDestinationURL)
+        XCTAssertFalse(state.canStartMerge)
+    }
+
+    func testPreferredFormatAndModeRestoreFromPreferencesStore() {
+        let preferencesStore = makePreferencesStore()
+        preferencesStore.set("flac", forKey: "AudioConverter.preferredFormat")
+        preferencesStore.set(AppState.OperationMode.mergeIntoOne.rawValue, forKey: "AudioConverter.preferredOperationMode")
+
+        let state = AppState(preferencesStore: preferencesStore)
+
+        XCTAssertEqual(state.outputFormat, "flac")
+        XCTAssertEqual(state.operationMode, .mergeIntoOne)
+    }
+
+    func testChangingFormatAndModePersistsToPreferencesStore() {
+        let preferencesStore = makePreferencesStore()
+        let state = AppState(preferencesStore: preferencesStore)
+
+        state.outputFormat = "wav"
+        state.operationMode = .mergeIntoOne
+
+        XCTAssertEqual(preferencesStore.string(forKey: "AudioConverter.preferredFormat"), "wav")
+        XCTAssertEqual(
+            preferencesStore.string(forKey: "AudioConverter.preferredOperationMode"),
+            AppState.OperationMode.mergeIntoOne.rawValue
+        )
+    }
+
     func testMergeModeRequiresDestinationAndAtLeastTwoFiles() {
         let state = makeReadyAppState(
             selectMergeDestinationURL: { _, _ in
@@ -359,7 +405,8 @@ final class AudioConverterTests: XCTestCase {
         session: ControlledConversionSession? = nil,
         mergeSession: ControlledMergeSession? = nil,
         selectAudioFiles: @escaping AppState.FileSelector = { [] },
-        selectMergeDestinationURL: @escaping AppState.MergeDestinationSelector = { _, _ in nil }
+        selectMergeDestinationURL: @escaping AppState.MergeDestinationSelector = { _, _ in nil },
+        preferencesStore: UserDefaults? = nil
     ) -> AppState {
         let controlledSession = session ?? ControlledConversionSession()
         let controlledMergeSession = mergeSession ?? ControlledMergeSession()
@@ -368,6 +415,7 @@ final class AudioConverterTests: XCTestCase {
             validateStartupCapabilities: { _ in .ready },
             selectAudioFiles: selectAudioFiles,
             selectMergeDestinationURL: selectMergeDestinationURL,
+            preferencesStore: preferencesStore ?? makePreferencesStore(),
             makeConversionSession: { _, _, _, onUpdate, onCompletion in
                 controlledSession.onUpdate = onUpdate
                 controlledSession.onCompletion = onCompletion
@@ -400,6 +448,13 @@ final class AudioConverterTests: XCTestCase {
         }
 
         XCTAssertTrue(predicate(state.startupState), "Timed out waiting for startup state, got \(state.startupState)")
+    }
+
+    private func makePreferencesStore() -> UserDefaults {
+        let suiteName = "AudioConverterTests.\(UUID().uuidString)"
+        let store = UserDefaults(suiteName: suiteName)!
+        store.removePersistentDomain(forName: suiteName)
+        return store
     }
 }
 

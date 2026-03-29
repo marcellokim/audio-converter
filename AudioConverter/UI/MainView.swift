@@ -46,6 +46,7 @@ struct MainView: View {
                     files: appState.selectedAudioFiles,
                     action: handleSelectFiles,
                     onRemove: handleRemoveSelectedFile,
+                    onClearAll: handleClearAllFiles,
                     onMoveUp: handleMoveSelectedFileUp,
                     onMoveDown: handleMoveSelectedFileDown,
                     canBrowseFiles: appState.canOpenFiles,
@@ -68,6 +69,7 @@ struct MainView: View {
                 files: appState.selectedAudioFiles,
                 action: handleSelectFiles,
                 onRemove: handleRemoveSelectedFile,
+                onClearAll: handleClearAllFiles,
                 onMoveUp: handleMoveSelectedFileUp,
                 onMoveDown: handleMoveSelectedFileDown,
                 canBrowseFiles: appState.canOpenFiles,
@@ -84,25 +86,20 @@ struct MainView: View {
         VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
             operationModeSection
 
+            FormatInputView(
+                outputFormat: $appState.outputFormat,
+                formats: FormatRegistry.allFormats,
+                isEnabled: !appState.isConverting
+            )
+
             if isMergeMode {
                 mergeDestinationSection
-
-                primaryActionSection
-
-                FormatInputView(
-                    outputFormat: $appState.outputFormat,
-                    formats: FormatRegistry.allFormats,
-                    isEnabled: !appState.isConverting
-                )
-            } else {
-                primaryActionSection
-
-                FormatInputView(
-                    outputFormat: $appState.outputFormat,
-                    formats: FormatRegistry.allFormats,
-                    isEnabled: !appState.isConverting
-                )
             }
+
+            Divider()
+                .padding(.vertical, 4)
+
+            primaryActionSection
         }
     }
 
@@ -216,32 +213,56 @@ struct MainView: View {
                 }
             }
 
-            if !isMergeMode || appState.isConverting || !canStartPrimaryAction {
-                statusCallout(
-                    title: "Readiness",
-                    message: readinessMessage,
-                    tone: .muted
-                )
-            }
-
-            if case let .invalidFormat(rawInput) = validationState {
-                statusCallout(
-                    title: "Format check",
-                    message: invalidFormatMessage(for: rawInput),
-                    tone: .warning
-                )
-            }
-
-            if !isMergeMode || appState.isConverting || !canStartPrimaryAction {
-                statusCallout(
-                    title: "Live status",
-                    message: appState.statusMessage,
-                    tone: appState.isConverting ? .accent : .standard,
-                    identifier: "status-message"
-                )
-            }
+            let guidance = prioritizedGuidance
+            statusCallout(
+                title: guidance.title,
+                message: guidance.message,
+                tone: guidance.tone,
+                identifier: guidance.identifier
+            )
         }
         .workspaceSurface(tone: .standard)
+    }
+
+    private var prioritizedGuidance: (
+        title: String,
+        message: String,
+        tone: WorkspaceSurfaceTone,
+        identifier: String?
+    ) {
+        if case let .invalidFormat(rawInput) = validationState {
+            return (
+                title: "Format check",
+                message: invalidFormatMessage(for: rawInput),
+                tone: .warning,
+                identifier: nil
+            )
+        }
+
+        if appState.isConverting {
+            return (
+                title: "Live status",
+                message: appState.statusMessage,
+                tone: .accent,
+                identifier: "status-message"
+            )
+        }
+
+        if canStartPrimaryAction {
+            return (
+                title: "Ready to go",
+                message: readinessMessage,
+                tone: .success,
+                identifier: "status-message"
+            )
+        }
+
+        return (
+            title: "Next step",
+            message: readinessMessage,
+            tone: .muted,
+            identifier: "status-message"
+        )
     }
 
     private func statusCallout(
@@ -494,6 +515,10 @@ struct MainView: View {
 
     private func handleRemoveSelectedFile(_ file: SelectedAudioFile) {
         appState.removeSelectedFile(file)
+    }
+
+    private func handleClearAllFiles() {
+        appState.clearAllFiles()
     }
 
     private func handleMoveSelectedFileUp(_ file: SelectedAudioFile) {
