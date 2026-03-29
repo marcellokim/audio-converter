@@ -16,13 +16,13 @@ struct FileSelectionView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(isMergeMode ? "Ordered source files" : "Source files")
-                        .font(.custom("Avenir Next Condensed", size: 24).weight(.semibold))
+                        .font(WorkspaceType.sectionTitle)
                     Text(
                         isMergeMode
                             ? "Move files up or down to control the final playback order in the merged export."
                             : "Original folders stay intact. Converted outputs render beside the source."
                     )
-                    .font(.custom("Menlo", size: 11))
+                    .font(WorkspaceType.body)
                     .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -33,19 +33,15 @@ struct FileSelectionView: View {
             }
 
             Text(helperText)
-                .font(.custom("Menlo", size: 11))
+                .font(WorkspaceType.detail)
                 .foregroundStyle(.secondary)
 
             if files.isEmpty {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.primary.opacity(0.04))
-                    .frame(minHeight: 108)
-                    .overlay(alignment: .leading) {
-                        Text("No source files selected yet.")
-                            .font(.custom("Hoefler Text", size: 22))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 20)
-                    }
+                Text("No source files selected yet.")
+                    .font(WorkspaceType.bodyStrong)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 108 - WorkspaceChrome.insetPadding * 2, alignment: .leading)
+                    .workspaceInsetSurface(tone: .muted)
             } else {
                 VStack(spacing: 10) {
                     ForEach(Array(files.enumerated()), id: \.element.id) { index, file in
@@ -54,13 +50,13 @@ struct FileSelectionView: View {
                                 .foregroundStyle(Color.accentColor)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(file.displayName)
-                                    .font(.custom("Hoefler Text", size: 19))
+                                    .font(WorkspaceType.bodyStrong)
                                     .lineLimit(1)
                                     .truncationMode(.middle)
                                     .accessibilityLabel(file.displayName)
                                     .accessibilityIdentifier("staged-file-name-\(file.displayName)")
                                 Text(file.directoryURL.path)
-                                    .font(.custom("Menlo", size: 10))
+                                    .font(WorkspaceType.detail)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
                                     .truncationMode(.middle)
@@ -101,9 +97,8 @@ struct FileSelectionView: View {
                                 }
                             }
                         }
-                        .padding(14)
-                        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .workspaceInsetSurface(tone: .muted, padding: 14)
                     }
                 }
             }

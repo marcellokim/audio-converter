@@ -554,6 +554,7 @@ enum WorkspaceSurfaceTone {
     case muted
     case warning
     case critical
+    case success
 
     var fillColor: Color {
         switch self {
@@ -567,6 +568,8 @@ enum WorkspaceSurfaceTone {
             return Color.orange.opacity(0.10)
         case .critical:
             return Color.red.opacity(0.11)
+        case .success:
+            return Color.green.opacity(0.10)
         }
     }
 
@@ -582,6 +585,8 @@ enum WorkspaceSurfaceTone {
             return Color.orange.opacity(0.22)
         case .critical:
             return Color.red.opacity(0.24)
+        case .success:
+            return Color.green.opacity(0.24)
         }
     }
 }
@@ -635,6 +640,8 @@ struct WorkspaceBadge: View {
             return .red
         case .accent:
             return .accentColor
+        case .success:
+            return .green
         case .standard, .muted:
             return .secondary
         }

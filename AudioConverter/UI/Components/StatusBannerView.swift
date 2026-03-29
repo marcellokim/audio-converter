@@ -20,25 +20,30 @@ struct StatusBannerView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.custom("Avenir Next Condensed", size: 20).weight(.semibold))
+                    .font(WorkspaceType.sectionTitle)
                 Text(message)
-                    .font(.custom("Menlo", size: 12))
+                    .font(WorkspaceType.body)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
 
             Spacer(minLength: 0)
         }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(backgroundColor)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(borderColor, lineWidth: 1)
-        )
+        .workspaceSurface(tone: surfaceTone, padding: 18)
         .accessibilityElement(children: .combine)
+    }
+
+    private var surfaceTone: WorkspaceSurfaceTone {
+        switch tone {
+        case .checking:
+            return .accent
+        case .ready:
+            return .success
+        case .active:
+            return .warning
+        case .blocked:
+            return .critical
+        }
     }
 
     private var symbolName: String {
@@ -64,32 +69,6 @@ struct StatusBannerView: View {
             return .orange.opacity(0.95)
         case .blocked:
             return .red.opacity(0.95)
-        }
-    }
-
-    private var backgroundColor: Color {
-        switch tone {
-        case .checking:
-            return Color.accentColor.opacity(0.09)
-        case .ready:
-            return Color.green.opacity(0.10)
-        case .active:
-            return Color.orange.opacity(0.11)
-        case .blocked:
-            return Color.red.opacity(0.10)
-        }
-    }
-
-    private var borderColor: Color {
-        switch tone {
-        case .checking:
-            return Color.accentColor.opacity(0.20)
-        case .ready:
-            return Color.green.opacity(0.24)
-        case .active:
-            return Color.orange.opacity(0.24)
-        case .blocked:
-            return Color.red.opacity(0.24)
         }
     }
 }
