@@ -37,13 +37,13 @@ This project emphasizes:
 
 ## Current implementation status
 
-As of **March 26, 2026**, the repository includes:
+As of **March 29, 2026**, the repository includes:
 
 - a generated Xcode project backed by **`project.yml`**
 - the SwiftUI app in **`AudioConverter/`**
 - unit tests, UI automation tests, and real-FFmpeg integration coverage in **`AudioConverterTests/`** and **`AudioConverterUITests/`**
 - a vendored macOS **arm64** FFmpeg binary at **`AudioConverter/Resources/ffmpeg/ffmpeg`**
-- scripts and documentation for FFmpeg provenance, distribution/signing, and notice-bundle packaging
+- scripts and documentation for FFmpeg provenance, release packaging, distribution signing/notarization, and notice-bundle packaging
 
 The current implementation is verified with:
 
@@ -70,6 +70,7 @@ The current implementation is verified with:
 - `AudioConverter/Resources/ffmpeg/ffmpeg` — vendored FFmpeg executable
 - `scripts/embed-ffmpeg.sh` — embeds the vendored FFmpeg binary into the app bundle
 - `scripts/package-notice-bundle.sh` — stages the canonical `ThirdPartyNotices/` release packet
+- `scripts/release-sign-and-notarize.sh` — stages notices, signs the helper/app bundle, and drives notarization for the zipped release artifact
 - `docs/ffmpeg-provenance.md` — FFmpeg source/build provenance
 - `docs/distribution-signing.md` — signing and notarization notes
 - `docs/uiux-workspace.md` — adaptive workspace contract and selector constraints
@@ -108,12 +109,15 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -scheme Audi
 
 ## Latest local verification
 
-Verified on **March 26, 2026** with:
+Verified on **March 29, 2026** with:
 
 - `xcodebuild -scheme AudioConverter -destination 'platform=macOS' build`
+- `xcodebuild -project AudioConverter.xcodeproj -scheme AudioConverter -configuration Release SYMROOT=build build`
 - `xcodebuild -scheme AudioConverter -destination 'platform=macOS' -only-testing:AudioConverterTests test`
-- `xcodebuild -scheme AudioConverter -destination 'platform=macOS' -only-testing:AudioConverterUITests test`
-- `xcodebuild -scheme AudioConverter -destination 'platform=macOS' test`
+- `xcodebuild -project AudioConverter.xcodeproj -scheme AudioConverter -destination 'platform=macOS' -only-testing:AudioConverterTests/RealFFmpegIntegrationTests test`
+- `bash -n scripts/release-sign-and-notarize.sh`
+- `scripts/release-sign-and-notarize.sh --mode rehearse --app build/Release/AudioConverter.app`
+- `scripts/release-sign-and-notarize.sh --mode run --app <temp-copy>.app --signing-identity - --nested-signing-identity - --skip-notarization`
 
 All of the above completed successfully in the local workspace.
 
@@ -126,6 +130,6 @@ The vendored FFmpeg artifact is currently an **LGPL-compatible local build of FF
 
 ## Current caveats / next steps
 
-- Distribution packaging, signing, and notarization still need to be finalized for a release-ready app package.
-- The repository is already suitable as a portfolio/code-review sample, but final shipping automation remains a follow-up task.
+- The repository now includes a repeatable zipped-release packaging/signing/notarization lane, but a real Developer ID signing + Apple notarization submission still requires release-machine access to the Apple credentials.
+- The repository is already suitable as a portfolio/code-review sample, and the remaining release step is operational rather than code-completeness work.
 - External desktop overlays can still slow UI automation in rare cases even when tests pass; the app-side selector/test seams remain stable.

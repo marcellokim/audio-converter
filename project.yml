@@ -39,7 +39,7 @@ targets:
         inputFiles:
           - $(PROJECT_DIR)/AudioConverter/Resources/ffmpeg/ffmpeg
         outputFiles:
-          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ffmpeg/.embed-ffmpeg.stamp
+          - $(DERIVED_FILE_DIR)/embed-ffmpeg.stamp
   AudioConverterTests:
     type: bundle.unit-test
     platform: macOS

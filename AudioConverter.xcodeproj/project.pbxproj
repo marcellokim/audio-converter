@@ -37,6 +37,7 @@
 		7AF17A2977A55E01A7A15BF0 /* AudioConverterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7BF1FE6422BB74A64F92656 /* AudioConverterApp.swift */; };
 		7E0785FADA3E1B33DC3E3659 /* ConversionItemState.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACAD48F3A8F82B3D03A9917E /* ConversionItemState.swift */; };
 		7F96FA4412499722D5B415E3 /* OutputPathResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4AC8CD941BB9B4526407CB0 /* OutputPathResolver.swift */; };
+		8A2540773B09A5F3272B81FF /* FFmpegBinaryResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6033777750E0BFD02651E05A /* FFmpegBinaryResolverTests.swift */; };
 		8E98AF52D93DB3AF9C578DE5 /* FFmpegStartupSelfCheckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3229ADB81CC92BFB389C5979 /* FFmpegStartupSelfCheckTests.swift */; };
 		910362374BC0D57436FD0CDB /* InputDurationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18C1482E6C52785A9BD18A31 /* InputDurationProvider.swift */; };
 		96CB7D540E19C115760B514A /* BatchStatusListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C522BA732CC5BC6BA124E813 /* BatchStatusListView.swift */; };
@@ -105,6 +106,7 @@
 		5963999B262AF66E82113ACB /* BatchStatusPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchStatusPresenterTests.swift; sourceTree = "<group>"; };
 		59F9DA6D6B93BBFE714BCA59 /* FileSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSelectionView.swift; sourceTree = "<group>"; };
 		5E2F427B338A8BCDD3F9727A /* FFmpegRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegRunner.swift; sourceTree = "<group>"; };
+		6033777750E0BFD02651E05A /* FFmpegBinaryResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FFmpegBinaryResolverTests.swift; sourceTree = "<group>"; };
 		619D0443F323935075CBE2C8 /* SpyFileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpyFileManager.swift; sourceTree = "<group>"; };
 		643718D78DE82ED3B63523CA /* SpyFFmpegRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpyFFmpegRunner.swift; sourceTree = "<group>"; };
 		6704E96C93E52DA73CF59947 /* MergeExportEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MergeExportEngine.swift; sourceTree = "<group>"; };
@@ -205,6 +207,7 @@
 				5963999B262AF66E82113ACB /* BatchStatusPresenterTests.swift */,
 				398624677030681B22F560F3 /* ConversionCoordinatorTests.swift */,
 				86BA7F50ED21E703429C2DE9 /* ConversionEngineTests.swift */,
+				6033777750E0BFD02651E05A /* FFmpegBinaryResolverTests.swift */,
 				5018A57B35AE681DFCF1AF6D /* FFmpegCommandBuilderTests.swift */,
 				3229ADB81CC92BFB389C5979 /* FFmpegStartupSelfCheckTests.swift */,
 				6FCAD58BCC2FB99D79E89C27 /* FileManagingTests.swift */,
@@ -445,11 +448,11 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ffmpeg/.embed-ffmpeg.stamp",
+				"$(DERIVED_FILE_DIR)/embed-ffmpeg.stamp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "#!/bin/sh\nset -eu\n\nSOURCE_FFMPEG=\"${PROJECT_DIR}/AudioConverter/Resources/ffmpeg/ffmpeg\"\nDEST_DIR=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ffmpeg\"\nDEST_FFMPEG=\"${DEST_DIR}/ffmpeg\"\nSTAMP_FILE=\"${DEST_DIR}/.embed-ffmpeg.stamp\"\n\nmkdir -p \"${DEST_DIR}\"\n\nif [ ! -f \"${SOURCE_FFMPEG}\" ]; then\n  echo \"warning: vendored ffmpeg binary not found at ${SOURCE_FFMPEG}; skipping embed step\"\n  : > \"${STAMP_FILE}\"\n  exit 0\nfi\n\ncp \"${SOURCE_FFMPEG}\" \"${DEST_FFMPEG}\"\nchmod +x \"${DEST_FFMPEG}\"\n: > \"${STAMP_FILE}\"\n";
+			shellScript = "#!/bin/sh\nset -eu\n\nSOURCE_FFMPEG=\"${PROJECT_DIR}/AudioConverter/Resources/ffmpeg/ffmpeg\"\nDEST_DIR=\"${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Helpers\"\nDEST_FFMPEG=\"${DEST_DIR}/ffmpeg\"\nLEGACY_DEST_DIR=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ffmpeg\"\nSTAMP_DIR=\"${DERIVED_FILE_DIR}\"\nSTAMP_FILE=\"${STAMP_DIR}/embed-ffmpeg.stamp\"\n\nrm -rf \"${LEGACY_DEST_DIR}\"\nrm -f \"${DEST_DIR}/.embed-ffmpeg.stamp\"\nmkdir -p \"${DEST_DIR}\"\nmkdir -p \"${STAMP_DIR}\"\n\nif [ ! -f \"${SOURCE_FFMPEG}\" ]; then\n  echo \"warning: vendored ffmpeg binary not found at ${SOURCE_FFMPEG}; skipping embed step\"\n  : > \"${STAMP_FILE}\"\n  exit 0\nfi\n\ncp \"${SOURCE_FFMPEG}\" \"${DEST_FFMPEG}\"\nchmod +x \"${DEST_FFMPEG}\"\n: > \"${STAMP_FILE}\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -514,6 +517,7 @@
 				C8419BE71E6A1BCB4710B3D9 /* BatchStatusPresenterTests.swift in Sources */,
 				F1828CF1D2E0CF878E819DF1 /* ConversionCoordinatorTests.swift in Sources */,
 				5F69B60F65978E3785E0A823 /* ConversionEngineTests.swift in Sources */,
+				8A2540773B09A5F3272B81FF /* FFmpegBinaryResolverTests.swift in Sources */,
 				D7C187581FCD3ACDB44E860D /* FFmpegCommandBuilderTests.swift in Sources */,
 				8E98AF52D93DB3AF9C578DE5 /* FFmpegStartupSelfCheckTests.swift in Sources */,
 				559527CC5883C9CC17C6D163 /* FileManagingTests.swift in Sources */,

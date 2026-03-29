@@ -40,6 +40,7 @@ The current vendored FFmpeg binary has only system runtime dependencies accordin
 - Stage the final reviewer-facing bundle with `scripts/package-notice-bundle.sh <destination>`.
 - The packaged root must be `ThirdPartyNotices/`, with the FFmpeg provenance/licensing docs copied verbatim into `ThirdPartyNotices/FFmpeg/`.
 - `docs/notice-bundle/THIRD-PARTY-NOTICES.md` and `docs/notice-bundle/SOURCE-OFFER.md` provide the reviewer summary and corresponding-source instructions that accompany this provenance record.
+- Release builds embed the vendored executable inside the signed app bundle at `Contents/Helpers/ffmpeg` while keeping the repo-tracked source artifact at `AudioConverter/Resources/ffmpeg/ffmpeg`.
 
 ## Required audio capabilities validated against the vendored binary
 - Encoders: `libmp3lame`, `aac`, `pcm_s16le`, `flac`, `pcm_s16be`, `libopus`, `libvorbis`
@@ -50,7 +51,7 @@ The repo's startup self-check, real-FFmpeg integration test, and fresh scheme te
 ## Operational status vs. release status
 - **Resolved:** the repo no longer ships the prior GPL-enabled third-party artifact. The vendored binary now comes from an official FFmpeg source tarball, its build configuration does **not** include `--enable-gpl` / `--enable-nonfree`, and `ffmpeg -L` reports LGPL `2.1 or later`.
 - **Resolved for P1:** the matching FFmpeg + external-library notice/source-offer payload now lives in `docs/notice-bundle/` and can be staged as `ThirdPartyNotices/` with `scripts/package-notice-bundle.sh`.
-- **Still required before release:** final release packaging/signing/notarization automation must consume that staged bundle.
+- **Remaining release-machine requirement:** run the scripted release packaging/signing/notarization lane with Apple Developer signing + notarization credentials.
 
 ## Related release documents
 - `docs/ffmpeg-licensing.md` — release-time license and source-distribution obligations for the shipped FFmpeg binary.

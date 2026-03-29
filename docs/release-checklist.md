@@ -17,7 +17,7 @@
 8. Run the full test suite with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project AudioConverter.xcodeproj -scheme AudioConverter -destination 'platform=macOS' test`.
 
 ## Signing + notarization
-1. Run the scripted rehearsal path to stage `Contents/Resources/ThirdPartyNotices`, verify the built bundle contains the nested vendored `ffmpeg` executable, and generate the notarization zip:
+1. Run the scripted rehearsal path to stage `Contents/Resources/ThirdPartyNotices`, verify the built bundle contains the nested vendored helper executable at `Contents/Helpers/ffmpeg`, and generate the notarization-submission zip:
    ```bash
    scripts/release-sign-and-notarize.sh --mode rehearse --app build/Release/AudioConverter.app
    ```
@@ -26,13 +26,16 @@
    export AUDIOCONVERTER_SIGNING_IDENTITY="Developer ID Application: Example Corp (TEAMID1234)"
    export AUDIOCONVERTER_NOTARY_PROFILE="AudioConverter-Notary"
    export AUDIOCONVERTER_TEAM_ID="TEAMID1234"
+   # Optional only if the release app needs explicit non-default entitlements:
+   # export AUDIOCONVERTER_APP_ENTITLEMENTS="/absolute/path/to/Distribution.entitlements"
    ```
 3. Run the full signing/notarization lane:
    ```bash
    scripts/release-sign-and-notarize.sh --mode run --app build/Release/AudioConverter.app
    ```
 4. Inspect `build/release-automation/notarytool-submit.json` and preserve it with the release notes/build metadata.
-5. Verify Gatekeeper acceptance on a clean macOS machine after stapling.
+5. Preserve `build/release-automation/AudioConverter-distribution.zip` as the final user-facing direct-download artifact built from the stapled app.
+6. Verify Gatekeeper acceptance on a clean macOS machine after stapling.
 
 ## Manual QA before shipping
 - Launch the app and confirm startup self-check succeeds with the bundled ffmpeg binary.
@@ -42,4 +45,4 @@
 - Confirm output files land beside their source files.
 
 ## Current known gaps
-- The P2 automation path is now scripted, but a real notarization pass still requires release-machine access to the Apple signing identity and stored `notarytool` credentials.
+- The repo-side release lane is now scripted and locally verified, but a real notarization pass still requires release-machine access to the Apple signing identity and stored `notarytool` credentials.

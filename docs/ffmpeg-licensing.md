@@ -52,10 +52,10 @@ Do not ship until all of the following are true:
 - Provenance, checksums, and license notices are updated to match the shipped artifact.
 - The recorded metadata taken from the shipped binary (`-version`, `-buildconf`, encoder list, muxer list) matches the published provenance/licensing notes.
 - The release artifact contains the canonical `ThirdPartyNotices/` bundle exactly once, with the files listed above.
-- The signed release bundle contains `Contents/Resources/ffmpeg/ffmpeg`.
+- The signed release bundle contains `Contents/Helpers/ffmpeg`.
 
 ## Current blocker
 - The old **missing binary** blocker is resolved.
 - The old **GPL-compatibility** blocker is resolved for the currently vendored binary: the recorded build configuration omits GPL-enabling flags and `ffmpeg -L` reports LGPL `2.1 or later`.
 - The old **missing notice bundle** blocker is resolved in-repo: the canonical `ThirdPartyNotices/` payload now lives under `docs/notice-bundle/` and can be staged with `scripts/package-notice-bundle.sh`.
-- The remaining release blocker is downstream packaging/signing/notarization automation for the final distributable.
+- The remaining operational blocker is access to the Apple signing identity and stored `notarytool` credentials on the release machine.
