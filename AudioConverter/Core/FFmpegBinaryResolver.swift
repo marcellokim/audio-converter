@@ -1,12 +1,19 @@
 import Foundation
 
 enum FFmpegBinaryResolver {
-    static func bundledBinaryURL(bundle: Bundle = .main) -> URL? {
-        bundle.url(forResource: "ffmpeg", withExtension: nil, subdirectory: "ffmpeg")
+    private static let helperRelativePath = "Contents/Helpers/ffmpeg"
+
+    static func bundledBinaryURL(bundle: Bundle = .main, fileManager: FileManager = .default) -> URL? {
+        let helperURL = bundle.bundleURL.appendingPathComponent(helperRelativePath)
+        if fileManager.fileExists(atPath: helperURL.path) {
+            return helperURL
+        }
+
+        return bundle.url(forResource: "ffmpeg", withExtension: nil, subdirectory: "ffmpeg")
     }
 
     static func resolve(bundle: Bundle = .main, fileManager: FileManager = .default) -> StartupState {
-        guard let url = bundledBinaryURL(bundle: bundle) else {
+        guard let url = bundledBinaryURL(bundle: bundle, fileManager: fileManager) else {
             return .startupError("Bundled ffmpeg binary is missing.")
         }
 
