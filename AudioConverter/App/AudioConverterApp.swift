@@ -84,7 +84,7 @@ struct AudioConverterApp: App {
         }
 
         guard startupScenario != nil || fileSelectionScenario != nil || savePanelScenario != nil || conversionScenario != nil || mergeScenario != nil else {
-            return AppState()
+            return AppState(preferencesStore: .standard)
         }
 
         let selectAudioFiles = fileSelectionScenario?.makeFileSelector() ?? {
@@ -139,7 +139,7 @@ struct AudioConverterApp: App {
             selectMergeDestinationURL: selectMergeDestinationURL
         )
 #else
-        return AppState()
+        return AppState(preferencesStore: .standard)
 #endif
     }
 

@@ -97,7 +97,7 @@ final class AppState: ObservableObject {
                 suggestedBaseName: files.first?.url.deletingPathExtension().lastPathComponent ?? "merged-audio"
             )
         },
-        preferencesStore: UserDefaults = .standard,
+        preferencesStore: UserDefaults = AppState.makeTransientPreferencesStore(),
         makeConversionSession: @escaping ConversionSessionFactory = { files, format, ffmpegURL, onUpdate, onCompletion in
             ConversionCoordinator().makeSession(
                 files: files,
@@ -641,6 +641,16 @@ final class AppState: ObservableObject {
                 statusMessage = "Choose a destination for the merged \(format.displayName) file."
             }
         }
+    }
+
+    private static func makeTransientPreferencesStore() -> UserDefaults {
+        let suiteName = "AudioConverter.AppState.Transient.\(UUID().uuidString)"
+        guard let store = UserDefaults(suiteName: suiteName) else {
+            return .standard
+        }
+
+        store.removePersistentDomain(forName: suiteName)
+        return store
     }
 
     private static func restorePreferredFormat(from preferencesStore: UserDefaults) -> String {
