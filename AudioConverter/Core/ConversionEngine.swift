@@ -90,9 +90,10 @@ struct ConversionEngine {
             }
             let handle = ConversionExecutionHandle(
                 waitForResult: {
-                    finishRunningTask(
-                        runningTask,
-                        job: job,
+                    FFmpegExecutionLifecycle.finish(
+                        runningTask: runningTask,
+                        outputURL: job.outputURL,
+                        temporaryOutputURL: job.temporaryOutputURL,
                         fileManager: fileManager
                     )
                 },
@@ -121,76 +122,9 @@ private func makeConversionProgress(
     from event: FFmpegProgressEvent,
     durationSeconds: Double?
 ) -> ConversionProgress? {
-    if let durationSeconds, durationSeconds > 0, let outTimeSeconds = event.outTimeSeconds {
-        let fractionCompleted = min(max(outTimeSeconds / durationSeconds, 0), 1)
-        let percentComplete = Int((fractionCompleted * 100).rounded())
-        return ConversionProgress(
-            fractionCompleted: fractionCompleted,
-            isIndeterminate: false,
-            progressDetail: "\(percentComplete)% complete"
-        )
-    }
-
-    if let outTimeSeconds = event.outTimeSeconds {
-        return ConversionProgress(
-            fractionCompleted: nil,
-            isIndeterminate: true,
-            progressDetail: String(format: "Rendered %.1fs so far.", outTimeSeconds)
-        )
-    }
-
-    guard event.progressState == "continue" else {
-        return nil
-    }
-
-    return ConversionProgress(
-        fractionCompleted: nil,
-        isIndeterminate: true,
-        progressDetail: "Rendering with ffmpeg."
+    FFmpegExecutionLifecycle.makeProgress(
+        from: event,
+        totalDurationSeconds: durationSeconds,
+        copy: .conversion
     )
-}
-
-private func finishRunningTask(
-    _ runningTask: FFmpegTaskRunning,
-    job: ConversionJob,
-    fileManager: FileManaging
-) -> ConversionItemState {
-    do {
-        let result = try runningTask.wait()
-        return mapRunResult(result, job: job, fileManager: fileManager)
-    } catch {
-        fileManager.removeItemIfPresent(at: job.temporaryOutputURL)
-        return .failed(reason: .processLaunchFailed(error.localizedDescription))
-    }
-}
-
-private func mapRunResult(
-    _ result: FFmpegRunResult,
-    job: ConversionJob,
-    fileManager: FileManaging
-) -> ConversionItemState {
-    if result.wasCancelled {
-        fileManager.removeItemIfPresent(at: job.temporaryOutputURL)
-        return .cancelled
-    }
-
-    guard result.terminationStatus == 0 else {
-        fileManager.removeItemIfPresent(at: job.temporaryOutputURL)
-        if result.standardError.localizedCaseInsensitiveContains("file exists") {
-            return .skipped(reason: .conflictExistingOutput)
-        }
-        let message = result.standardError.isEmpty ? "ffmpeg exited with status \(result.terminationStatus)." : result.standardError
-        return .failed(reason: .processFailed(message))
-    }
-
-    do {
-        try fileManager.moveItemAtomically(at: job.temporaryOutputURL, to: job.outputURL)
-        return .succeeded(outputURL: job.outputURL)
-    } catch {
-        fileManager.removeItemIfPresent(at: job.temporaryOutputURL)
-        if let cocoaError = error as? CocoaError, cocoaError.code == .fileWriteFileExists {
-            return .skipped(reason: .conflictExistingOutput)
-        }
-        return .failed(reason: .filesystem(error.localizedDescription))
-    }
 }

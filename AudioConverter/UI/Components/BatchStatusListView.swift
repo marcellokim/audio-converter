@@ -16,15 +16,10 @@ struct BatchStatusListView: View {
             if snapshots.isEmpty {
                 emptyState
             } else {
-                summaryRow
-
-                VStack(spacing: 12) {
-                    ForEach(snapshots) { snapshot in
-                        snapshotRow(snapshot)
-                    }
-                }
+                populatedState
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .workspaceSurface(tone: .standard)
     }
 
@@ -44,31 +39,52 @@ struct BatchStatusListView: View {
             }
 
             Spacer(minLength: 0)
+
+            WorkspaceBadge(title: "Idle", tone: .muted)
         }
         .workspaceInsetSurface(tone: .muted)
     }
 
-    private var summaryRow: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 8)], alignment: .leading, spacing: 8) {
-            ForEach(Array(summaryItems.enumerated()), id: \.offset) { entry in
-                let item = entry.element
-                Text("\(item.label) \(item.count)")
-                    .font(WorkspaceType.metric)
-                    .foregroundStyle(item.color)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(item.color.opacity(0.10), in: Capsule())
-                    .accessibilityIdentifier("batch-summary-\(item.label.lowercased())")
+    private var populatedState: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            summaryPills
+
+            VStack(spacing: 12) {
+                ForEach(snapshots) { snapshot in
+                    snapshotRow(snapshot)
+                }
             }
         }
+    }
+
+    private var summaryPills: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Current totals")
+                .font(WorkspaceType.caption)
+                .foregroundStyle(.secondary)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 8)], alignment: .leading, spacing: 8) {
+                ForEach(Array(summaryItems.enumerated()), id: \.offset) { entry in
+                    let item = entry.element
+                    Text("\(item.label) \(item.count)")
+                        .font(WorkspaceType.metric)
+                        .foregroundStyle(item.color)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(item.color.opacity(0.10), in: Capsule())
+                        .accessibilityIdentifier("batch-summary-\(item.label.lowercased())")
+                }
+            }
+        }
+        .workspaceInsetSurface(tone: .muted, padding: 12)
     }
 
     private func snapshotRow(_ snapshot: BatchStatusSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
                 Circle()
-                    .fill(color(for: snapshot.state))
+                    .fill(accentColor(for: snapshot.state))
                     .frame(width: 10, height: 10)
                     .padding(.top, 5)
 
@@ -78,17 +94,13 @@ struct BatchStatusListView: View {
                         .accessibilityIdentifier("batch-file-\(snapshot.fileName)")
                     Text(snapshot.state.label.uppercased())
                         .font(WorkspaceType.metric)
-                        .foregroundStyle(color(for: snapshot.state))
+                        .foregroundStyle(accentColor(for: snapshot.state))
                         .accessibilityIdentifier("batch-state-\(snapshot.fileName)")
                 }
 
                 Spacer(minLength: 0)
 
-                WorkspaceBadge(title: snapshot.state.label, tone: tone(for: snapshot.state))
-            }
-
-            if case .running = snapshot.state {
-                progressView(for: snapshot)
+                WorkspaceBadge(title: badgeTitle(for: snapshot), tone: tone(for: snapshot.state))
             }
 
             Text(snapshot.displayedDetail)
@@ -96,6 +108,10 @@ struct BatchStatusListView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("batch-detail-\(snapshot.fileName)")
+
+            if case .running = snapshot.state {
+                progressView(for: snapshot)
+            }
         }
         .workspaceInsetSurface(tone: tone(for: snapshot.state))
     }
@@ -105,19 +121,27 @@ struct BatchStatusListView: View {
         VStack(alignment: .leading, spacing: 6) {
             if let value = snapshot.fractionCompleted {
                 ProgressView(value: value, total: 1)
-                    .tint(color(for: snapshot.state))
+                    .tint(accentColor(for: snapshot.state))
                     .accessibilityIdentifier("batch-progress-\(snapshot.fileName)")
             } else {
                 ProgressView()
-                    .tint(color(for: snapshot.state))
+                    .tint(accentColor(for: snapshot.state))
                     .accessibilityIdentifier("batch-progress-\(snapshot.fileName)")
             }
 
             Text(snapshot.progressPercentText ?? "LIVE")
                 .font(WorkspaceType.metric)
-                .foregroundStyle(color(for: snapshot.state))
+                .foregroundStyle(accentColor(for: snapshot.state))
                 .accessibilityIdentifier("batch-progress-label-\(snapshot.fileName)")
         }
+    }
+
+    private func badgeTitle(for snapshot: BatchStatusSnapshot) -> String {
+        if case .running = snapshot.state {
+            return snapshot.progressPercentText ?? "Live"
+        }
+
+        return snapshot.state.label
     }
 
     private var summaryItems: [(label: String, count: Int, color: Color)] {
@@ -177,7 +201,7 @@ struct BatchStatusListView: View {
         case .cancelled:
             return .warning
         case .succeeded:
-            return .accent
+            return .success
         case .failed:
             return .critical
         case .skipped:
@@ -185,7 +209,7 @@ struct BatchStatusListView: View {
         }
     }
 
-    private func color(for state: ConversionItemState) -> Color {
+    private func accentColor(for state: ConversionItemState) -> Color {
         switch state {
         case .queued:
             return .secondary

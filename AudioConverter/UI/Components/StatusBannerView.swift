@@ -14,9 +14,9 @@ struct StatusBannerView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            Image(systemName: symbolName)
+            Image(systemName: iconName)
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(symbolColor)
+                .foregroundStyle(iconColor)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
@@ -26,8 +26,7 @@ struct StatusBannerView: View {
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
-
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .workspaceSurface(tone: surfaceTone, padding: 18)
         .accessibilityElement(children: .combine)
@@ -46,7 +45,7 @@ struct StatusBannerView: View {
         }
     }
 
-    private var symbolName: String {
+    private var iconName: String {
         switch tone {
         case .checking:
             return "waveform.path.ecg"
@@ -59,7 +58,7 @@ struct StatusBannerView: View {
         }
     }
 
-    private var symbolColor: Color {
+    private var iconColor: Color {
         switch tone {
         case .checking:
             return Color.accentColor

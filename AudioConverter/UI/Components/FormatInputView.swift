@@ -5,11 +5,11 @@ struct FormatInputView: View {
     let formats: [SupportedFormat]
     let isEnabled: Bool
 
-    private var suggestedFormats: String {
+    private var supportedFormatsSummary: String {
         formats.map(\.id).joined(separator: " · ")
     }
 
-    private var normalizedSelection: String {
+    private var selectedFormatKey: String {
         FormatRegistry.normalizedKey(for: outputFormat)
     }
 
@@ -22,10 +22,16 @@ struct FormatInputView: View {
             )
 
             HStack(spacing: 8) {
-                WorkspaceBadge(title: isEnabled ? "Editable" : "Locked", tone: isEnabled ? .accent : .muted)
+                WorkspaceBadge(
+                    title: isEnabled ? "Editable" : "Locked",
+                    tone: isEnabled ? .accent : .muted
+                )
 
-                if !normalizedSelection.isEmpty {
-                    WorkspaceBadge(title: normalizedSelection.uppercased(), tone: .muted)
+                if !selectedFormatKey.isEmpty {
+                    WorkspaceBadge(
+                        title: selectedFormatKey.uppercased(),
+                        tone: isEnabled ? .success : .muted
+                    )
                 }
             }
 
@@ -44,16 +50,24 @@ struct FormatInputView: View {
                     Button {
                         outputFormat = format.id
                     } label: {
-                        Text(format.id.uppercased())
-                            .font(WorkspaceType.metric)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .frame(maxWidth: .infinity)
-                            .background(chipBackground(for: format), in: Capsule())
-                            .overlay(
-                                Capsule()
-                                    .stroke(chipStroke(for: format), lineWidth: 1)
-                            )
+                        HStack(spacing: 4) {
+                            if isSelected(format) {
+                                Image(systemName: "checkmark")
+                                    .font(WorkspaceType.metric)
+                            }
+
+                            Text(format.id.uppercased())
+                                .font(WorkspaceType.metric)
+                        }
+                        .foregroundStyle(isSelected(format) ? Color.accentColor : .primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity)
+                        .background(chipBackground(for: format), in: Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(chipStroke(for: format), lineWidth: 1)
+                        )
                     }
                     .buttonStyle(.plain)
                     .disabled(!isEnabled)
@@ -61,7 +75,7 @@ struct FormatInputView: View {
                 }
             }
 
-            Text(isEnabled ? "Supported formats: \(suggestedFormats)" : "Format changes pause while a conversion or merge is running.")
+            Text(fieldGuidance)
                 .font(WorkspaceType.detail)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -69,14 +83,22 @@ struct FormatInputView: View {
         .workspaceSurface(tone: .standard)
     }
 
+    private var fieldGuidance: String {
+        isEnabled ? "Supported formats: \(supportedFormatsSummary)" : "Format changes pause while a conversion or merge is running."
+    }
+
+    private func isSelected(_ format: SupportedFormat) -> Bool {
+        selectedFormatKey == format.id
+    }
+
     private func chipBackground(for format: SupportedFormat) -> Color {
-        normalizedSelection == format.id
+        isSelected(format)
             ? Color.accentColor.opacity(0.14)
             : Color.primary.opacity(0.05)
     }
 
     private func chipStroke(for format: SupportedFormat) -> Color {
-        normalizedSelection == format.id
+        isSelected(format)
             ? Color.accentColor.opacity(0.55)
             : Color.primary.opacity(0.10)
     }

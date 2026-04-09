@@ -6,18 +6,19 @@ struct MainView: View {
     var body: some View {
         GeometryReader { proxy in
             let layout = MainViewLayout(windowWidth: proxy.size.width)
+            let presentation = WorkspacePresentation(appState: appState)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
-                    header
+                    header(using: presentation)
 
                     StatusBannerView(
-                        title: bannerTitle,
-                        message: bannerMessage,
-                        tone: bannerTone
+                        title: presentation.banner.title,
+                        message: presentation.banner.message,
+                        tone: presentation.banner.tone
                     )
 
-                    workspace(for: layout)
+                    workspace(for: layout, presentation: presentation)
                 }
                 .padding(WorkspaceChrome.pagePadding)
                 .frame(width: max(layout.availableWidth, 0), alignment: .leading)
@@ -26,7 +27,10 @@ struct MainView: View {
     }
 
     @ViewBuilder
-    private func workspace(for layout: MainViewLayout) -> some View {
+    private func workspace(
+        for layout: MainViewLayout,
+        presentation: WorkspacePresentation
+    ) -> some View {
         if layout.prefersTwoColumn {
             let secondaryWidth = min(max(layout.availableWidth * 0.34, 280), 320)
             HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
@@ -36,28 +40,16 @@ struct MainView: View {
                         alignment: .leading
                     )
                     .layoutPriority(1)
-                secondaryLane
+
+                secondaryLane(using: presentation)
                     .frame(width: secondaryWidth, alignment: .leading)
             }
             .frame(width: max(layout.availableWidth, 0), alignment: .leading)
         } else {
             VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
-                FileSelectionView(
-                    files: appState.selectedAudioFiles,
-                    action: handleSelectFiles,
-                    onRemove: handleRemoveSelectedFile,
-                    onClearAll: handleClearAllFiles,
-                    onMoveUp: handleMoveSelectedFileUp,
-                    onMoveDown: handleMoveSelectedFileDown,
-                    canBrowseFiles: appState.canOpenFiles,
-                    canRemoveFiles: appState.canRemoveSelectedFiles,
-                    canReorderFiles: appState.canReorderSelectedFiles,
-                    isMergeMode: isMergeMode
-                )
-
-                secondaryLane
-
-                BatchStatusListView(snapshots: appState.batchSnapshots)
+                fileSelectionSection
+                secondaryLane(using: presentation)
+                batchStatusSection
             }
             .frame(width: max(layout.availableWidth, 0), alignment: .leading)
         }
@@ -65,24 +57,31 @@ struct MainView: View {
 
     private var primaryLane: some View {
         VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
-            FileSelectionView(
-                files: appState.selectedAudioFiles,
-                action: handleSelectFiles,
-                onRemove: handleRemoveSelectedFile,
-                onClearAll: handleClearAllFiles,
-                onMoveUp: handleMoveSelectedFileUp,
-                onMoveDown: handleMoveSelectedFileDown,
-                canBrowseFiles: appState.canOpenFiles,
-                canRemoveFiles: appState.canRemoveSelectedFiles,
-                canReorderFiles: appState.canReorderSelectedFiles,
-                isMergeMode: isMergeMode
-            )
-
-            BatchStatusListView(snapshots: appState.batchSnapshots)
+            fileSelectionSection
+            batchStatusSection
         }
     }
 
-    private var secondaryLane: some View {
+    private var fileSelectionSection: some View {
+        FileSelectionView(
+            files: appState.selectedAudioFiles,
+            action: handleSelectFiles,
+            onRemove: handleRemoveSelectedFile,
+            onClearAll: handleClearAllFiles,
+            onMoveUp: handleMoveSelectedFileUp,
+            onMoveDown: handleMoveSelectedFileDown,
+            canBrowseFiles: appState.canOpenFiles,
+            canRemoveFiles: appState.canRemoveSelectedFiles,
+            canReorderFiles: appState.canReorderSelectedFiles,
+            isMergeMode: isMergeMode
+        )
+    }
+
+    private var batchStatusSection: some View {
+        BatchStatusListView(snapshots: appState.batchSnapshots)
+    }
+
+    private func secondaryLane(using presentation: WorkspacePresentation) -> some View {
         VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
             operationModeSection
 
@@ -99,11 +98,11 @@ struct MainView: View {
             Divider()
                 .padding(.vertical, 4)
 
-            primaryActionSection
+            primaryActionSection(using: presentation.action)
         }
     }
 
-    private var header: some View {
+    private func header(using presentation: WorkspacePresentation) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -119,10 +118,8 @@ struct MainView: View {
                 Spacer(minLength: 0)
 
                 WorkspaceBadge(
-                    title: appState.isConverting
-                        ? (isMergeMode ? "Merge in flight" : "Batch in flight")
-                        : (isMergeMode ? "Merge studio" : "Batch studio"),
-                    tone: appState.isConverting ? .accent : .muted
+                    title: presentation.headerBadge.title,
+                    tone: presentation.headerBadge.tone
                 )
             }
 
@@ -182,7 +179,7 @@ struct MainView: View {
                     .truncationMode(.middle)
                     .accessibilityIdentifier("merge-destination-name")
                     .frame(maxWidth: .infinity, alignment: .leading)
-                .workspaceInsetSurface(tone: .muted)
+                    .workspaceInsetSurface(tone: .muted)
             } else {
                 Text("No merge destination selected yet.")
                     .font(WorkspaceType.detail)
@@ -193,27 +190,26 @@ struct MainView: View {
         .workspaceSurface(tone: .standard)
     }
 
-    private var primaryActionSection: some View {
-        VStack(alignment: .leading, spacing: isMergeMode ? 10 : 16) {
+    private func primaryActionSection(using action: WorkspacePresentation.Action) -> some View {
+        let guidance = action.guidance
+
+        return VStack(alignment: .leading, spacing: isMergeMode ? 10 : 16) {
             WorkspaceSectionHeader(
-                eyebrow: isMergeMode ? "Merge export" : "Batch export",
-                title: isMergeMode ? "Run the ordered merge" : "Run the conversion batch",
-                message: isMergeMode
-                    ? "Start the merge once the staged files and destination are ready."
-                    : "Readiness, validation, and live progress stay separated so blocked states do not crowd the main CTA row."
+                eyebrow: action.eyebrow,
+                title: action.title,
+                message: action.message
             )
 
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 10) {
-                    actionButtons
+                    actionButtons(using: action)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    actionButtons
+                    actionButtons(using: action)
                 }
             }
 
-            let guidance = prioritizedGuidance
             statusCallout(
                 title: guidance.title,
                 message: guidance.message,
@@ -222,47 +218,6 @@ struct MainView: View {
             )
         }
         .workspaceSurface(tone: .standard)
-    }
-
-    private var prioritizedGuidance: (
-        title: String,
-        message: String,
-        tone: WorkspaceSurfaceTone,
-        identifier: String?
-    ) {
-        if case let .invalidFormat(rawInput) = validationState {
-            return (
-                title: "Format check",
-                message: invalidFormatMessage(for: rawInput),
-                tone: .warning,
-                identifier: nil
-            )
-        }
-
-        if appState.isConverting {
-            return (
-                title: "Live status",
-                message: appState.statusMessage,
-                tone: .accent,
-                identifier: "status-message"
-            )
-        }
-
-        if canStartPrimaryAction {
-            return (
-                title: "Ready to go",
-                message: readinessMessage,
-                tone: .success,
-                identifier: "status-message"
-            )
-        }
-
-        return (
-            title: "Next step",
-            message: readinessMessage,
-            tone: .muted,
-            identifier: "status-message"
-        )
     }
 
     private func statusCallout(
@@ -285,20 +240,20 @@ struct MainView: View {
     }
 
     @ViewBuilder
-    private var actionButtons: some View {
-        Button(primaryActionTitle, action: handleStartPrimaryAction)
+    private func actionButtons(using action: WorkspacePresentation.Action) -> some View {
+        Button(action.primaryButtonTitle, action: handleStartPrimaryAction)
             .buttonStyle(.borderedProminent)
-            .disabled(!canStartPrimaryAction)
-            .accessibilityIdentifier(primaryActionIdentifier)
+            .disabled(!action.canStartPrimaryAction)
+            .accessibilityIdentifier(action.primaryButtonIdentifier)
 
-        if appState.isConverting {
-            Button(cancelActionTitle, action: handleCancelConversion)
+        if action.showsCancelButton {
+            Button(action.cancelButtonTitle, action: handleCancelConversion)
                 .buttonStyle(.bordered)
-                .disabled(!appState.canCancelConversion)
-                .accessibilityIdentifier(cancelActionIdentifier)
+                .disabled(!action.canCancel)
+                .accessibilityIdentifier(action.cancelButtonIdentifier)
         }
 
-        if appState.canRetryStartupChecks {
+        if action.showsRetryStartupButton {
             Button("Retry Startup Check", action: handleRetryStartupChecks)
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("retry-startup-check")
@@ -330,175 +285,6 @@ struct MainView: View {
 
     private var isMergeMode: Bool {
         appState.operationMode == .mergeIntoOne
-    }
-
-    private var validationState: ValidationState {
-        appState.formatValidationState
-    }
-
-    private var selectedFormat: SupportedFormat? {
-        guard case let .valid(format) = validationState else {
-            return nil
-        }
-
-        return format
-    }
-
-    private var canStartPrimaryAction: Bool {
-        isMergeMode ? appState.canStartMerge : appState.canStartConversion
-    }
-
-    private var primaryActionTitle: String {
-        isMergeMode ? "Start Merge" : "Start Conversion"
-    }
-
-    private var primaryActionIdentifier: String {
-        isMergeMode ? "start-merge" : "start-conversion"
-    }
-
-    private var cancelActionTitle: String {
-        if isMergeMode {
-            return appState.isCancelling ? "Cancelling Merge…" : "Cancel Merge"
-        }
-
-        return appState.isCancelling ? "Cancelling Batch…" : "Cancel Batch"
-    }
-
-    private var cancelActionIdentifier: String {
-        isMergeMode ? "cancel-merge" : "cancel-conversion"
-    }
-
-    private var bannerTone: StatusBannerView.Tone {
-        switch appState.startupState {
-        case .idle, .checking:
-            return .checking
-        case .startupError:
-            return .blocked
-        case .ready:
-            return appState.isConverting ? .active : .ready
-        }
-    }
-
-    private var bannerTitle: String {
-        switch appState.startupState {
-        case .idle:
-            return "Preparing launch"
-        case .checking:
-            return "Checking bundled ffmpeg"
-        case .startupError:
-            return "Startup blocked"
-        case .ready:
-            if appState.isConverting {
-                if isMergeMode {
-                    return appState.isCancelling ? "Cancelling merge" : "Merging ordered audio"
-                }
-
-                return appState.isCancelling ? "Cancelling batch" : "Converting batch"
-            }
-
-            if let format = selectedFormat {
-                if isMergeMode {
-                    return appState.selectedAudioFiles.count < 2
-                        ? "Stage files for ordered merge"
-                        : "Merge into one \(format.displayName)"
-                }
-
-                if appState.selectedAudioFiles.isEmpty {
-                    return "Ready for source files"
-                }
-
-                return "Prepared for \(format.displayName)"
-            }
-
-            return "Choose a supported format"
-        }
-    }
-
-    private var bannerMessage: String {
-        switch appState.startupState {
-        case .idle, .checking:
-            return "AudioConverter is validating the bundled ffmpeg runtime before file selection and export become available."
-        case let .startupError(message):
-            return message
-        case .ready:
-            if appState.isConverting, let format = selectedFormat {
-                let verb = isMergeMode ? "Merging" : "Rendering"
-                return "\(verb) \(appState.selectedAudioFiles.count) file(s) to \(format.displayName). \(appState.statusMessage)"
-            }
-
-            if let format = selectedFormat {
-                if isMergeMode {
-                    if appState.selectedAudioFiles.isEmpty {
-                        return "Stage files, set their order, choose a destination, and merge into one \(format.displayName) export."
-                    }
-
-                    return "\(appState.selectedAudioFiles.count) ordered file(s) are staged for one \(format.displayName) export. \(appState.statusMessage)"
-                }
-
-                if appState.selectedAudioFiles.isEmpty {
-                    return "The workspace is ready and waiting for files to render as \(format.displayName)."
-                }
-
-                return "\(appState.selectedAudioFiles.count) file(s) are staged for \(format.displayName). \(appState.statusMessage)"
-            }
-
-            return "Supported formats come from the built-in registry: \(supportedFormatsList)."
-        }
-    }
-
-    private var readinessMessage: String {
-        switch appState.startupState {
-        case .idle, .checking:
-            return "Wait for the startup self-check to finish."
-        case .startupError:
-            return "Retry the startup self-check to continue."
-        case .ready:
-            if appState.isCancelling {
-                return isMergeMode
-                    ? "Cancellation is in progress. Controls will re-enable when the merge finishes."
-                    : "Cancellation is in progress. Controls will re-enable when the batch finishes."
-            }
-
-            if appState.isConverting {
-                return isMergeMode
-                    ? "Merge is running. Controls will re-enable when the export completes."
-                    : "Conversion is running. Controls will re-enable when the batch completes."
-            }
-
-            if appState.selectedAudioFiles.isEmpty {
-                return isMergeMode
-                    ? "Choose two or more source files to enable ordered merge."
-                    : "Choose one or more source files to enable conversion."
-            }
-
-            guard let format = selectedFormat else {
-                return "Enter a supported format such as \(supportedFormatsList)."
-            }
-
-            if isMergeMode {
-                if appState.selectedAudioFiles.count < 2 {
-                    return "Add at least one more source file to enable ordered merge."
-                }
-
-                if appState.mergeDestinationURL == nil {
-                    return "Choose a destination before starting the merged \(format.displayName) export."
-                }
-
-                return "The ordered merge will export one \(format.outputExtension.uppercased()) file."
-            }
-
-            return "Conversion will render beside the source files as \(format.outputExtension.uppercased())."
-        }
-    }
-
-    private var supportedFormatsList: String {
-        FormatRegistry.allFormats.map(\.id).joined(separator: ", ")
-    }
-
-    private func invalidFormatMessage(for rawInput: String) -> String {
-        let candidate = FormatRegistry.normalizedKey(for: rawInput)
-        let token = candidate.isEmpty ? "That format" : "\"\(candidate)\""
-        return "\(token) is not in the registry yet. Try \(supportedFormatsList)."
     }
 
     private func handleSelectFiles() {
@@ -535,6 +321,354 @@ struct MainView: View {
 
     private func handleRetryStartupChecks() {
         appState.retryStartupChecks()
+    }
+}
+
+private struct WorkspacePresentation {
+    struct Banner {
+        let title: String
+        let message: String
+        let tone: StatusBannerView.Tone
+    }
+
+    struct HeaderBadge {
+        let title: String
+        let tone: WorkspaceSurfaceTone
+    }
+
+    struct Guidance {
+        let title: String
+        let message: String
+        let tone: WorkspaceSurfaceTone
+        let identifier: String?
+    }
+
+    struct Action {
+        let eyebrow: String
+        let title: String
+        let message: String
+        let primaryButtonTitle: String
+        let primaryButtonIdentifier: String
+        let canStartPrimaryAction: Bool
+        let cancelButtonTitle: String
+        let cancelButtonIdentifier: String
+        let showsCancelButton: Bool
+        let canCancel: Bool
+        let showsRetryStartupButton: Bool
+        let guidance: Guidance
+    }
+
+    let banner: Banner
+    let headerBadge: HeaderBadge
+    let action: Action
+
+    init(appState: AppState) {
+        let isMergeMode = appState.operationMode == .mergeIntoOne
+        let selectedFormat = Self.selectedFormat(from: appState.formatValidationState)
+        let supportedFormatsList = FormatRegistry.allFormats.map(\.id).joined(separator: ", ")
+        let canStartPrimaryAction = isMergeMode ? appState.canStartMerge : appState.canStartConversion
+        let primaryButtonTitle = isMergeMode ? "Start Merge" : "Start Conversion"
+        let primaryButtonIdentifier = isMergeMode ? "start-merge" : "start-conversion"
+        let cancelButtonIdentifier = isMergeMode ? "cancel-merge" : "cancel-conversion"
+
+        headerBadge = HeaderBadge(
+            title: appState.isConverting
+                ? (isMergeMode ? "Merge in flight" : "Batch in flight")
+                : (isMergeMode ? "Merge studio" : "Batch studio"),
+            tone: appState.isConverting ? .accent : .muted
+        )
+
+        banner = Self.makeBanner(
+            appState: appState,
+            isMergeMode: isMergeMode,
+            selectedFormat: selectedFormat,
+            supportedFormatsList: supportedFormatsList
+        )
+
+        action = Self.makeAction(
+            appState: appState,
+            isMergeMode: isMergeMode,
+            selectedFormat: selectedFormat,
+            supportedFormatsList: supportedFormatsList,
+            canStartPrimaryAction: canStartPrimaryAction,
+            primaryButtonTitle: primaryButtonTitle,
+            primaryButtonIdentifier: primaryButtonIdentifier,
+            cancelButtonIdentifier: cancelButtonIdentifier
+        )
+    }
+
+    private static func selectedFormat(from validationState: ValidationState) -> SupportedFormat? {
+        guard case let .valid(format) = validationState else {
+            return nil
+        }
+
+        return format
+    }
+
+    private static func makeBanner(
+        appState: AppState,
+        isMergeMode: Bool,
+        selectedFormat: SupportedFormat?,
+        supportedFormatsList: String
+    ) -> Banner {
+        let tone: StatusBannerView.Tone
+        switch appState.startupState {
+        case .idle, .checking:
+            tone = .checking
+        case .startupError:
+            tone = .blocked
+        case .ready:
+            tone = appState.isConverting ? .active : .ready
+        }
+
+        let title: String
+        switch appState.startupState {
+        case .idle:
+            title = "Preparing launch"
+        case .checking:
+            title = "Checking bundled ffmpeg"
+        case .startupError:
+            title = "Startup blocked"
+        case .ready:
+            if appState.isConverting {
+                if isMergeMode {
+                    title = appState.isCancelling ? "Cancelling merge" : "Merging ordered audio"
+                } else {
+                    title = appState.isCancelling ? "Cancelling batch" : "Converting batch"
+                }
+            } else if let selectedFormat {
+                if isMergeMode {
+                    title = appState.selectedAudioFiles.count < 2
+                        ? "Stage files for ordered merge"
+                        : "Merge into one \(selectedFormat.displayName)"
+                } else if appState.selectedAudioFiles.isEmpty {
+                    title = "Ready for source files"
+                } else {
+                    title = "Prepared for \(selectedFormat.displayName)"
+                }
+            } else {
+                title = "Choose a supported format"
+            }
+        }
+
+        let message: String
+        switch appState.startupState {
+        case .idle, .checking:
+            message = "AudioConverter is validating the bundled ffmpeg runtime before file selection and export become available."
+        case let .startupError(errorMessage):
+            message = errorMessage
+        case .ready:
+            if appState.isConverting, let selectedFormat {
+                let verb = isMergeMode ? "Merging" : "Rendering"
+                message = "\(verb) \(appState.selectedAudioFiles.count) file(s) to \(selectedFormat.displayName). \(appState.statusMessage)"
+            } else if let selectedFormat {
+                if isMergeMode {
+                    if appState.selectedAudioFiles.isEmpty {
+                        message = "Stage files, set their order, choose a destination, and merge into one \(selectedFormat.displayName) export."
+                    } else {
+                        message = "\(appState.selectedAudioFiles.count) ordered file(s) are staged for one \(selectedFormat.displayName) export. \(appState.statusMessage)"
+                    }
+                } else if appState.selectedAudioFiles.isEmpty {
+                    message = "The workspace is ready and waiting for files to render as \(selectedFormat.displayName)."
+                } else {
+                    message = "\(appState.selectedAudioFiles.count) file(s) are staged for \(selectedFormat.displayName). \(appState.statusMessage)"
+                }
+            } else {
+                message = "Supported formats come from the built-in registry: \(supportedFormatsList)."
+            }
+        }
+
+        return Banner(title: title, message: message, tone: tone)
+    }
+
+    private static func makeAction(
+        appState: AppState,
+        isMergeMode: Bool,
+        selectedFormat: SupportedFormat?,
+        supportedFormatsList: String,
+        canStartPrimaryAction: Bool,
+        primaryButtonTitle: String,
+        primaryButtonIdentifier: String,
+        cancelButtonIdentifier: String
+    ) -> Action {
+        Action(
+            eyebrow: isMergeMode ? "Merge export" : "Batch export",
+            title: isMergeMode ? "Run the ordered merge" : "Run the conversion batch",
+            message: isMergeMode
+                ? "Start the merge once the staged files and destination are ready."
+                : "Readiness, validation, and live progress stay separated so blocked states do not crowd the main CTA row.",
+            primaryButtonTitle: primaryButtonTitle,
+            primaryButtonIdentifier: primaryButtonIdentifier,
+            canStartPrimaryAction: canStartPrimaryAction,
+            cancelButtonTitle: cancelButtonTitle(for: appState, isMergeMode: isMergeMode),
+            cancelButtonIdentifier: cancelButtonIdentifier,
+            showsCancelButton: appState.isConverting,
+            canCancel: appState.canCancelConversion,
+            showsRetryStartupButton: appState.canRetryStartupChecks,
+            guidance: prioritizedGuidance(
+                appState: appState,
+                isMergeMode: isMergeMode,
+                selectedFormat: selectedFormat,
+                supportedFormatsList: supportedFormatsList,
+                canStartPrimaryAction: canStartPrimaryAction
+            )
+        )
+    }
+
+    private static func cancelButtonTitle(for appState: AppState, isMergeMode: Bool) -> String {
+        if isMergeMode {
+            return appState.isCancelling ? "Cancelling Merge…" : "Cancel Merge"
+        }
+
+        return appState.isCancelling ? "Cancelling Batch…" : "Cancel Batch"
+    }
+
+    private static func prioritizedGuidance(
+        appState: AppState,
+        isMergeMode: Bool,
+        selectedFormat: SupportedFormat?,
+        supportedFormatsList: String,
+        canStartPrimaryAction: Bool
+    ) -> Guidance {
+        if case let .invalidFormat(rawInput) = appState.formatValidationState {
+            return Guidance(
+                title: "Format check",
+                message: invalidFormatMessage(for: rawInput, supportedFormatsList: supportedFormatsList),
+                tone: .warning,
+                identifier: nil
+            )
+        }
+
+        if appState.isConverting {
+            return Guidance(
+                title: "Live status",
+                message: appState.statusMessage,
+                tone: .accent,
+                identifier: "status-message"
+            )
+        }
+
+        if let statusFeedback = statusFeedback(
+            appState: appState,
+            supportedFormatsList: supportedFormatsList
+        ) {
+            return statusFeedback
+        }
+
+        let readinessMessage = readinessMessage(
+            appState: appState,
+            isMergeMode: isMergeMode,
+            selectedFormat: selectedFormat,
+            supportedFormatsList: supportedFormatsList
+        )
+
+        if canStartPrimaryAction {
+            return Guidance(
+                title: "Ready to go",
+                message: readinessMessage,
+                tone: .success,
+                identifier: "status-message"
+            )
+        }
+
+        return Guidance(
+            title: "Next step",
+            message: readinessMessage,
+            tone: .muted,
+            identifier: "status-message"
+        )
+    }
+
+    private static func statusFeedback(
+        appState: AppState,
+        supportedFormatsList: String
+    ) -> Guidance? {
+        let baselineMessage = AppStateStatusPolicy.currentInputMessage(
+            startupState: appState.startupState,
+            operationMode: appState.operationMode,
+            selectedFileCount: appState.selectedFiles.count,
+            validationState: appState.formatValidationState,
+            mergeDestinationURL: appState.mergeDestinationURL,
+            supportedFormatSummary: supportedFormatsList
+        )
+
+        guard appState.statusMessage != baselineMessage else {
+            return nil
+        }
+
+        let loweredStatus = appState.statusMessage.lowercased()
+        let tone: WorkspaceSurfaceTone
+
+        if loweredStatus.contains("cancel") {
+            tone = .warning
+        } else if loweredStatus.contains("finished") || loweredStatus.contains("loaded") {
+            tone = .success
+        } else {
+            tone = .accent
+        }
+
+        return Guidance(
+            title: "Recent update",
+            message: appState.statusMessage,
+            tone: tone,
+            identifier: "status-message"
+        )
+    }
+
+    private static func readinessMessage(
+        appState: AppState,
+        isMergeMode: Bool,
+        selectedFormat: SupportedFormat?,
+        supportedFormatsList: String
+    ) -> String {
+        switch appState.startupState {
+        case .idle, .checking:
+            return "Wait for the startup self-check to finish."
+        case .startupError:
+            return "Retry the startup self-check to continue."
+        case .ready:
+            if appState.isCancelling {
+                return isMergeMode
+                    ? "Cancellation is in progress. Controls will re-enable when the merge finishes."
+                    : "Cancellation is in progress. Controls will re-enable when the batch finishes."
+            }
+
+            if appState.isConverting {
+                return isMergeMode
+                    ? "Merge is running. Controls will re-enable when the export completes."
+                    : "Conversion is running. Controls will re-enable when the batch completes."
+            }
+
+            if appState.selectedAudioFiles.isEmpty {
+                return isMergeMode
+                    ? "Choose two or more source files to enable ordered merge."
+                    : "Choose one or more source files to enable conversion."
+            }
+
+            guard let selectedFormat else {
+                return "Enter a supported format such as \(supportedFormatsList)."
+            }
+
+            if isMergeMode {
+                if appState.selectedAudioFiles.count < 2 {
+                    return "Add at least one more source file to enable ordered merge."
+                }
+
+                if appState.mergeDestinationURL == nil {
+                    return "Choose a destination before starting the merged \(selectedFormat.displayName) export."
+                }
+
+                return "The ordered merge will export one \(selectedFormat.outputExtension.uppercased()) file."
+            }
+
+            return "Conversion will render beside the source files as \(selectedFormat.outputExtension.uppercased())."
+        }
+    }
+
+    private static func invalidFormatMessage(for rawInput: String, supportedFormatsList: String) -> String {
+        let candidate = FormatRegistry.normalizedKey(for: rawInput)
+        let token = candidate.isEmpty ? "That format" : "\"\(candidate)\""
+        return "\(token) is not in the registry yet. Try \(supportedFormatsList)."
     }
 }
 

@@ -85,8 +85,8 @@ struct MergeExportEngine {
 
             let handle = ConversionExecutionHandle(
                 waitForResult: {
-                    finishMergeTask(
-                        runningTask,
+                    FFmpegExecutionLifecycle.finish(
+                        runningTask: runningTask,
                         outputURL: job.outputURL,
                         temporaryOutputURL: job.temporaryOutputURL,
                         fileManager: fileManager
@@ -108,85 +108,9 @@ private func makeMergeProgress(
     from event: FFmpegProgressEvent,
     totalDurationSeconds: Double?
 ) -> ConversionProgress? {
-    if let totalDurationSeconds, totalDurationSeconds > 0, let outTimeSeconds = event.outTimeSeconds {
-        let fractionCompleted = min(max(outTimeSeconds / totalDurationSeconds, 0), 1)
-        let percentComplete = Int((fractionCompleted * 100).rounded())
-        return ConversionProgress(
-            fractionCompleted: fractionCompleted,
-            isIndeterminate: false,
-            progressDetail: "\(percentComplete)% merged"
-        )
-    }
-
-    if let outTimeSeconds = event.outTimeSeconds {
-        return ConversionProgress(
-            fractionCompleted: nil,
-            isIndeterminate: true,
-            progressDetail: String(format: "Merged %.1fs so far.", outTimeSeconds)
-        )
-    }
-
-    guard event.progressState == "continue" else {
-        return nil
-    }
-
-    return ConversionProgress(
-        fractionCompleted: nil,
-        isIndeterminate: true,
-        progressDetail: "Merging with ffmpeg."
+    FFmpegExecutionLifecycle.makeProgress(
+        from: event,
+        totalDurationSeconds: totalDurationSeconds,
+        copy: .merge
     )
-}
-
-private func finishMergeTask(
-    _ runningTask: FFmpegTaskRunning,
-    outputURL: URL,
-    temporaryOutputURL: URL,
-    fileManager: FileManaging
-) -> ConversionItemState {
-    do {
-        let result = try runningTask.wait()
-        return mapMergeRunResult(
-            result,
-            outputURL: outputURL,
-            temporaryOutputURL: temporaryOutputURL,
-            fileManager: fileManager
-        )
-    } catch {
-        fileManager.removeItemIfPresent(at: temporaryOutputURL)
-        return .failed(reason: .processLaunchFailed(error.localizedDescription))
-    }
-}
-
-private func mapMergeRunResult(
-    _ result: FFmpegRunResult,
-    outputURL: URL,
-    temporaryOutputURL: URL,
-    fileManager: FileManaging
-) -> ConversionItemState {
-    if result.wasCancelled {
-        fileManager.removeItemIfPresent(at: temporaryOutputURL)
-        return .cancelled
-    }
-
-    guard result.terminationStatus == 0 else {
-        fileManager.removeItemIfPresent(at: temporaryOutputURL)
-        if result.standardError.localizedCaseInsensitiveContains("file exists") {
-            return .skipped(reason: .conflictExistingOutput)
-        }
-        let message = result.standardError.isEmpty
-            ? "ffmpeg exited with status \(result.terminationStatus)."
-            : result.standardError
-        return .failed(reason: .processFailed(message))
-    }
-
-    do {
-        try fileManager.moveItemAtomically(at: temporaryOutputURL, to: outputURL)
-        return .succeeded(outputURL: outputURL)
-    } catch {
-        fileManager.removeItemIfPresent(at: temporaryOutputURL)
-        if let cocoaError = error as? CocoaError, cocoaError.code == .fileWriteFileExists {
-            return .skipped(reason: .conflictExistingOutput)
-        }
-        return .failed(reason: .filesystem(error.localizedDescription))
-    }
 }

@@ -17,7 +17,7 @@ final class ConversionCoordinatorSession {
     private let ffmpegURL: URL
     private let onUpdate: SnapshotHandler
     private let onCompletion: SnapshotHandler
-    private let processingQueue = DispatchQueue(label: "AudioConverter.BatchConversionSession")
+    private let processingQueue = DispatchQueue(label: "AudioConverter.ConversionCoordinatorSession")
     private let lock = NSLock()
 
     private var items: [SessionItem]
@@ -310,17 +310,17 @@ final class ConversionCoordinatorSession {
 
 struct ConversionCoordinator {
     private let engine: ConversionEngine
-    private let presenter: BatchStatusPresenting
-    let maximumConcurrentJobs: Int
+
+    init(engine: ConversionEngine = ConversionEngine()) {
+        self.engine = engine
+    }
 
     init(
         engine: ConversionEngine = ConversionEngine(),
-        presenter: BatchStatusPresenting = BatchStatusPresenter(),
-        maximumConcurrentJobs: Int = 2
+        presenter _: BatchStatusPresenting = BatchStatusPresenter(),
+        maximumConcurrentJobs _: Int = 2
     ) {
-        self.engine = engine
-        self.presenter = presenter
-        self.maximumConcurrentJobs = max(1, min(maximumConcurrentJobs, 2))
+        self.init(engine: engine)
     }
 
     func makeSession(
@@ -330,9 +330,6 @@ struct ConversionCoordinator {
         onUpdate: @escaping ConversionCoordinatorSession.SnapshotHandler = { _ in },
         onCompletion: @escaping ConversionCoordinatorSession.SnapshotHandler = { _ in }
     ) -> ConversionCoordinatorSession {
-        _ = presenter
-        _ = maximumConcurrentJobs
-
         return ConversionCoordinatorSession(
             files: files,
             format: format,

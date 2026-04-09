@@ -143,75 +143,68 @@ final class AppState: ObservableObject {
     }
 
     var canOpenFiles: Bool {
-        startupState == .ready && !isConverting
+        AppStateWorkflowRules.canOpenFiles(
+            startupState: startupState,
+            isConverting: isConverting
+        )
     }
 
     var canRemoveSelectedFiles: Bool {
-        !isConverting && !selectedFiles.isEmpty
+        AppStateWorkflowRules.canRemoveSelectedFiles(
+            isConverting: isConverting,
+            selectedFileCount: selectedFiles.count
+        )
     }
 
     var canRetryStartupChecks: Bool {
-        if case .startupError = startupState {
-            return true
-        }
-
-        return false
+        AppStateWorkflowRules.canRetryStartupChecks(startupState: startupState)
     }
 
     var canStartConversion: Bool {
-        guard operationMode == .batchConvert else {
-            return false
-        }
-
-        guard canOpenFiles, !selectedFiles.isEmpty else {
-            return false
-        }
-
-        guard case .valid = formatValidationState else {
-            return false
-        }
-
-        return true
+        AppStateWorkflowRules.canStartConversion(
+            operationMode: operationMode,
+            startupState: startupState,
+            isConverting: isConverting,
+            selectedFileCount: selectedFiles.count,
+            validationState: formatValidationState
+        )
     }
 
     var canChooseMergeDestination: Bool {
-        guard operationMode == .mergeIntoOne else {
-            return false
-        }
-
-        guard canOpenFiles, !selectedFiles.isEmpty else {
-            return false
-        }
-
-        guard case .valid = formatValidationState else {
-            return false
-        }
-
-        return true
+        AppStateWorkflowRules.canChooseMergeDestination(
+            operationMode: operationMode,
+            startupState: startupState,
+            isConverting: isConverting,
+            selectedFileCount: selectedFiles.count,
+            validationState: formatValidationState
+        )
     }
 
     var canStartMerge: Bool {
-        guard operationMode == .mergeIntoOne else {
-            return false
-        }
-
-        guard canOpenFiles, selectedFiles.count >= 2, mergeDestinationURL != nil else {
-            return false
-        }
-
-        guard case .valid = formatValidationState else {
-            return false
-        }
-
-        return true
+        AppStateWorkflowRules.canStartMerge(
+            operationMode: operationMode,
+            startupState: startupState,
+            isConverting: isConverting,
+            selectedFileCount: selectedFiles.count,
+            validationState: formatValidationState,
+            hasMergeDestination: mergeDestinationURL != nil
+        )
     }
 
     var canCancelConversion: Bool {
-        isConverting && !isCancelling && currentSession != nil
+        AppStateWorkflowRules.canCancelConversion(
+            isConverting: isConverting,
+            isCancelling: isCancelling,
+            hasCurrentSession: currentSession != nil
+        )
     }
 
     var canReorderSelectedFiles: Bool {
-        operationMode == .mergeIntoOne && !isConverting && selectedFiles.count > 1
+        AppStateWorkflowRules.canReorderSelectedFiles(
+            operationMode: operationMode,
+            isConverting: isConverting,
+            selectedFileCount: selectedFiles.count
+        )
     }
 
     func performStartupChecksIfNeeded() {
@@ -291,17 +284,18 @@ final class AppState: ObservableObject {
 
         let files = selectAudioFiles()
         guard !files.isEmpty else {
-            statusMessage = selectedFiles.isEmpty
-                ? "File selection cancelled."
-                : "File selection cancelled. Keeping \(selectedFiles.count) loaded file(s)."
+            statusMessage = AppStateStatusPolicy.selectionCancelledMessage(
+                existingFileCount: selectedFiles.count
+            )
             return
         }
 
         clearBatchSnapshotsForSelectionMutation()
         selectedFiles = files.map(\.url)
-        statusMessage = operationMode == .mergeIntoOne
-            ? "Loaded \(files.count) source file(s) for ordered merge."
-            : "Loaded \(files.count) source file(s)."
+        statusMessage = AppStateStatusPolicy.loadedFilesMessage(
+            fileCount: files.count,
+            operationMode: operationMode
+        )
         refreshStatusMessageForCurrentInputs()
     }
 
@@ -316,28 +310,15 @@ final class AppState: ObservableObject {
             return
         }
 
-        let format: SupportedFormat
-        switch formatValidationState {
-        case let .valid(value):
-            format = value
-        case let .invalidFormat(input):
-            let normalized = FormatRegistry.normalizedKey(for: input)
-            statusMessage = normalized.isEmpty
-                ? "Enter an output format such as \(Self.supportedFormatSummary)."
-                : "\"\(normalized)\" is not supported. Try \(Self.supportedFormatSummary)."
-            return
-        case .idle:
-            statusMessage = "Enter an output format such as \(Self.supportedFormatSummary)."
+        guard let format = validatedFormatOrUpdateStatusMessage() else {
             return
         }
 
         let destinationURL = selectMergeDestinationURL(files, format)
         guard let destinationURL else {
-            if let mergeDestinationURL {
-                statusMessage = "Destination selection cancelled. Keeping \(mergeDestinationURL.lastPathComponent)."
-            } else {
-                statusMessage = "Destination selection cancelled."
-            }
+            statusMessage = AppStateStatusPolicy.mergeDestinationSelectionCancelledMessage(
+                currentDestinationURL: mergeDestinationURL
+            )
             return
         }
 
@@ -408,24 +389,16 @@ final class AppState: ObservableObject {
             return
         }
 
-        let format: SupportedFormat
-        switch formatValidationState {
-        case let .valid(value):
-            format = value
-        case let .invalidFormat(input):
-            let normalized = FormatRegistry.normalizedKey(for: input)
-            statusMessage = normalized.isEmpty
-                ? "Enter an output format such as \(Self.supportedFormatSummary)."
-                : "\"\(normalized)\" is not supported. Try \(Self.supportedFormatSummary)."
-            return
-        case .idle:
-            statusMessage = "Enter an output format such as \(Self.supportedFormatSummary)."
+        guard let format = validatedFormatOrUpdateStatusMessage() else {
             return
         }
 
         isConverting = true
         isCancelling = false
-        statusMessage = "Converting \(files.count) file(s) to \(format.displayName)…"
+        statusMessage = AppStateStatusPolicy.conversionStartedMessage(
+            fileCount: files.count,
+            format: format
+        )
         batchSnapshots = []
 
         let session = makeConversionSession(
@@ -442,7 +415,10 @@ final class AppState: ObservableObject {
                     if self.isConverting {
                         self.statusMessage = self.isCancelling
                             ? "Cancelling current batch…"
-                            : self.makeInFlightStatusMessage(for: snapshots, format: format)
+                            : AppStateStatusPolicy.conversionInFlightMessage(
+                                snapshots: snapshots,
+                                format: format
+                            )
                     }
                 }
             },
@@ -456,7 +432,10 @@ final class AppState: ObservableObject {
                     self.isCancelling = false
                     self.currentSession = nil
                     self.batchSnapshots = snapshots
-                    self.statusMessage = self.makeCompletionStatusMessage(for: snapshots, format: format)
+                    self.statusMessage = AppStateStatusPolicy.conversionCompletionMessage(
+                        snapshots: snapshots,
+                        format: format
+                    )
                 }
             }
         )
@@ -486,18 +465,7 @@ final class AppState: ObservableObject {
             return
         }
 
-        let format: SupportedFormat
-        switch formatValidationState {
-        case let .valid(value):
-            format = value
-        case let .invalidFormat(input):
-            let normalized = FormatRegistry.normalizedKey(for: input)
-            statusMessage = normalized.isEmpty
-                ? "Enter an output format such as \(Self.supportedFormatSummary)."
-                : "\"\(normalized)\" is not supported. Try \(Self.supportedFormatSummary)."
-            return
-        case .idle:
-            statusMessage = "Enter an output format such as \(Self.supportedFormatSummary)."
+        guard let format = validatedFormatOrUpdateStatusMessage() else {
             return
         }
 
@@ -508,7 +476,10 @@ final class AppState: ObservableObject {
 
         isConverting = true
         isCancelling = false
-        statusMessage = "Merging \(files.count) file(s) into \(mergeDestinationURL.lastPathComponent)…"
+        statusMessage = AppStateStatusPolicy.mergeStartedMessage(
+            fileCount: files.count,
+            destinationURL: mergeDestinationURL
+        )
         batchSnapshots = []
 
         let session = makeMergeSession(
@@ -526,7 +497,10 @@ final class AppState: ObservableObject {
                     if self.isConverting {
                         self.statusMessage = self.isCancelling
                             ? "Cancelling current merge…"
-                            : self.makeMergeInFlightStatusMessage(for: snapshots, format: format)
+                            : AppStateStatusPolicy.mergeInFlightMessage(
+                                snapshots: snapshots,
+                                format: format
+                            )
                     }
                 }
             },
@@ -540,7 +514,10 @@ final class AppState: ObservableObject {
                     self.isCancelling = false
                     self.currentSession = nil
                     self.batchSnapshots = snapshots
-                    self.statusMessage = self.makeMergeCompletionStatusMessage(for: snapshots, format: format)
+                    self.statusMessage = AppStateStatusPolicy.mergeCompletionMessage(
+                        snapshots: snapshots,
+                        format: format
+                    )
                 }
             }
         )
@@ -584,63 +561,14 @@ final class AppState: ObservableObject {
             return
         }
 
-        switch startupState {
-        case .idle:
-            statusMessage = "Launch the app to run the bundled ffmpeg self-check."
-        case .checking:
-            statusMessage = "Running bundled ffmpeg self-check…"
-        case let .startupError(message):
-            statusMessage = message
-        case .ready:
-            switch operationMode {
-            case .batchConvert:
-                refreshBatchStatusMessage()
-            case .mergeIntoOne:
-                refreshMergeStatusMessage()
-            }
-        }
-    }
-
-    private func refreshBatchStatusMessage() {
-        switch formatValidationState {
-        case .idle:
-            statusMessage = selectedFiles.isEmpty
-                ? "Bundled ffmpeg is ready. Select source files and choose an output format."
-                : "Enter an output format such as \(Self.supportedFormatSummary)."
-        case let .invalidFormat(input):
-            let normalized = FormatRegistry.normalizedKey(for: input)
-            statusMessage = normalized.isEmpty
-                ? "Enter an output format such as \(Self.supportedFormatSummary)."
-                : "\"\(normalized)\" is not supported. Try \(Self.supportedFormatSummary)."
-        case let .valid(format):
-            statusMessage = selectedFiles.isEmpty
-                ? "Bundled ffmpeg is ready. Select source files to convert to \(format.displayName)."
-                : "Ready to convert \(selectedFiles.count) file(s) to \(format.displayName)."
-        }
-    }
-
-    private func refreshMergeStatusMessage() {
-        switch formatValidationState {
-        case .idle:
-            statusMessage = selectedFiles.isEmpty
-                ? "Bundled ffmpeg is ready. Select two or more source files and choose an output format to merge."
-                : "Enter an output format such as \(Self.supportedFormatSummary)."
-        case let .invalidFormat(input):
-            let normalized = FormatRegistry.normalizedKey(for: input)
-            statusMessage = normalized.isEmpty
-                ? "Enter an output format such as \(Self.supportedFormatSummary)."
-                : "\"\(normalized)\" is not supported. Try \(Self.supportedFormatSummary)."
-        case let .valid(format):
-            if selectedFiles.isEmpty {
-                statusMessage = "Bundled ffmpeg is ready. Select two or more source files to merge into one \(format.displayName) file."
-            } else if selectedFiles.count == 1 {
-                statusMessage = "Add at least one more source file to merge into one \(format.displayName) file."
-            } else if let mergeDestinationURL {
-                statusMessage = "Ready to merge \(selectedFiles.count) file(s) into \(mergeDestinationURL.lastPathComponent)."
-            } else {
-                statusMessage = "Choose a destination for the merged \(format.displayName) file."
-            }
-        }
+        statusMessage = AppStateStatusPolicy.currentInputMessage(
+            startupState: startupState,
+            operationMode: operationMode,
+            selectedFileCount: selectedFiles.count,
+            validationState: formatValidationState,
+            mergeDestinationURL: mergeDestinationURL,
+            supportedFormatSummary: Self.supportedFormatSummary
+        )
     }
 
     private static func makeTransientPreferencesStore() -> UserDefaults {
@@ -669,111 +597,17 @@ final class AppState: ObservableObject {
         return mode
     }
 
-    private func makeCompletionStatusMessage(for snapshots: [BatchStatusSnapshot], format: SupportedFormat) -> String {
-        let convertedCount = snapshots.filter {
-            if case .succeeded = $0.state {
-                return true
-            }
-            return false
-        }.count
-
-        let skippedCount = snapshots.filter {
-            if case .skipped = $0.state {
-                return true
-            }
-            return false
-        }.count
-
-        let failedCount = snapshots.filter {
-            if case .failed = $0.state {
-                return true
-            }
-            return false
-        }.count
-
-        let cancelledCount = snapshots.filter {
-            if case .cancelled = $0.state {
-                return true
-            }
-            return false
-        }.count
-
-        let summary = [
-            convertedCount > 0 ? "\(convertedCount) converted" : nil,
-            skippedCount > 0 ? "\(skippedCount) skipped" : nil,
-            failedCount > 0 ? "\(failedCount) failed" : nil,
-            cancelledCount > 0 ? "\(cancelledCount) cancelled" : nil
-        ]
-        .compactMap { $0 }
-        .joined(separator: ", ")
-
-        if summary.isEmpty {
-            return "Finished conversion to \(format.displayName), but no files were processed."
+    private func validatedFormatOrUpdateStatusMessage() -> SupportedFormat? {
+        switch formatValidationState {
+        case let .valid(format):
+            return format
+        case .idle, .invalidFormat:
+            statusMessage = AppStateStatusPolicy.formatRequirementMessage(
+                for: formatValidationState,
+                supportedFormatSummary: Self.supportedFormatSummary
+            )
+            return nil
         }
-
-        return "Finished conversion to \(format.displayName): \(summary)."
-    }
-
-    private func makeMergeCompletionStatusMessage(for snapshots: [BatchStatusSnapshot], format: SupportedFormat) -> String {
-        guard let snapshot = snapshots.first else {
-            return "Finished merge to \(format.displayName), but no output was produced."
-        }
-
-        switch snapshot.state {
-        case let .succeeded(outputURL):
-            return "Finished merge to \(format.displayName): saved \(outputURL.lastPathComponent)."
-        case .cancelled:
-            return "Finished merge to \(format.displayName): cancelled."
-        case .failed, .skipped:
-            return snapshot.displayedDetail
-        case .queued, .running:
-            return "Merge is still in progress."
-        }
-    }
-
-    private func makeInFlightStatusMessage(for snapshots: [BatchStatusSnapshot], format: SupportedFormat) -> String {
-        let summary = [
-            summaryCount(in: snapshots, matching: { if case .queued = $0 { return true } else { return false } }, label: "queued"),
-            summaryCount(in: snapshots, matching: { if case .running = $0 { return true } else { return false } }, label: "running"),
-            summaryCount(in: snapshots, matching: { if case .succeeded = $0 { return true } else { return false } }, label: "converted"),
-            summaryCount(in: snapshots, matching: { if case .skipped = $0 { return true } else { return false } }, label: "skipped"),
-            summaryCount(in: snapshots, matching: { if case .failed = $0 { return true } else { return false } }, label: "failed"),
-            summaryCount(in: snapshots, matching: { if case .cancelled = $0 { return true } else { return false } }, label: "cancelled")
-        ]
-        .compactMap { $0 }
-        .joined(separator: ", ")
-
-        if summary.isEmpty {
-            return "Converting \(snapshots.count) file(s) to \(format.displayName)…"
-        }
-
-        return "Converting to \(format.displayName): \(summary)."
-    }
-
-    private func makeMergeInFlightStatusMessage(for snapshots: [BatchStatusSnapshot], format: SupportedFormat) -> String {
-        guard let snapshot = snapshots.first else {
-            return "Merging to \(format.displayName)…"
-        }
-
-        switch snapshot.state {
-        case .queued:
-            return "Preparing merge to \(format.displayName)…"
-        case .running:
-            return snapshot.displayedDetail.isEmpty
-                ? "Merging to \(format.displayName)…"
-                : snapshot.displayedDetail
-        case .succeeded, .failed, .skipped, .cancelled:
-            return snapshot.displayedDetail
-        }
-    }
-
-    private func summaryCount(
-        in snapshots: [BatchStatusSnapshot],
-        matching predicate: (ConversionItemState) -> Bool,
-        label: String
-    ) -> String? {
-        let count = snapshots.filter { predicate($0.state) }.count
-        return count > 0 ? "\(count) \(label)" : nil
     }
 
     private static var supportedFormatSummary: String {
