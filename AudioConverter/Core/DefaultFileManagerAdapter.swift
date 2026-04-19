@@ -26,6 +26,15 @@ struct DefaultFileManagerAdapter: FileManaging {
         try fileManager.moveItem(at: sourceURL, to: destinationURL)
     }
 
+    func replaceItemAtomically(at sourceURL: URL, to destinationURL: URL) throws {
+        if fileExists(at: destinationURL) {
+            _ = try fileManager.replaceItemAt(destinationURL, withItemAt: sourceURL)
+            return
+        }
+
+        try fileManager.moveItem(at: sourceURL, to: destinationURL)
+    }
+
     func removeItemIfPresent(at url: URL) {
         guard fileExists(at: url) else { return }
         try? fileManager.removeItem(at: url)

@@ -32,10 +32,6 @@ struct MergeExportEngine {
             return .failure(.failed(reason: .validation("Select at least two source audio files before merging.")))
         }
 
-        if fileManager.fileExists(at: destinationURL) {
-            return .failure(.skipped(reason: .conflictExistingOutput))
-        }
-
         let temporaryOutputURL = fileManager.makeTemporaryOutputURL(for: destinationURL)
         let durations = files.map { inputDurationProvider.durationSeconds(for: $0.url) }
         let totalDurationSeconds: Double?
@@ -89,7 +85,8 @@ struct MergeExportEngine {
                         runningTask: runningTask,
                         outputURL: job.outputURL,
                         temporaryOutputURL: job.temporaryOutputURL,
-                        fileManager: fileManager
+                        fileManager: fileManager,
+                        existingOutputPolicy: .overwriteExisting
                     )
                 },
                 cancel: {

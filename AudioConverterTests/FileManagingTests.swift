@@ -31,6 +31,23 @@ final class FileManagingTests: XCTestCase {
         }
     }
 
+    func testReplaceItemAtomicallyOverwritesExistingDestination() throws {
+        let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+
+        let adapter = DefaultFileManagerAdapter()
+        let sourceURL = tempDirectory.appendingPathComponent("source.tmp")
+        let destinationURL = tempDirectory.appendingPathComponent("destination.tmp")
+        try Data("replacement".utf8).write(to: sourceURL)
+        try Data("existing".utf8).write(to: destinationURL)
+
+        try adapter.replaceItemAtomically(at: sourceURL, to: destinationURL)
+
+        XCTAssertEqual(try String(contentsOf: destinationURL), "replacement")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: sourceURL.path))
+    }
+
     func testRemoveItemIfPresentDeletesExistingFileAndIgnoresMissing() throws {
         let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)

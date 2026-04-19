@@ -1,6 +1,11 @@
 import Foundation
 
 enum FFmpegExecutionLifecycle {
+    enum ExistingOutputPolicy {
+        case avoidOverwrite
+        case overwriteExisting
+    }
+
     struct ProgressCopy {
         let percentSuffix: String
         let elapsedPrefix: String
@@ -57,7 +62,8 @@ enum FFmpegExecutionLifecycle {
         runningTask: FFmpegTaskRunning,
         outputURL: URL,
         temporaryOutputURL: URL,
-        fileManager: FileManaging
+        fileManager: FileManaging,
+        existingOutputPolicy: ExistingOutputPolicy = .avoidOverwrite
     ) -> ConversionItemState {
         do {
             let result = try runningTask.wait()
@@ -65,7 +71,8 @@ enum FFmpegExecutionLifecycle {
                 result,
                 outputURL: outputURL,
                 temporaryOutputURL: temporaryOutputURL,
-                fileManager: fileManager
+                fileManager: fileManager,
+                existingOutputPolicy: existingOutputPolicy
             )
         } catch {
             fileManager.removeItemIfPresent(at: temporaryOutputURL)
@@ -77,7 +84,8 @@ enum FFmpegExecutionLifecycle {
         _ result: FFmpegRunResult,
         outputURL: URL,
         temporaryOutputURL: URL,
-        fileManager: FileManaging
+        fileManager: FileManaging,
+        existingOutputPolicy: ExistingOutputPolicy
     ) -> ConversionItemState {
         if result.wasCancelled {
             fileManager.removeItemIfPresent(at: temporaryOutputURL)
@@ -94,11 +102,18 @@ enum FFmpegExecutionLifecycle {
         }
 
         do {
-            try fileManager.moveItemAtomically(at: temporaryOutputURL, to: outputURL)
+            switch existingOutputPolicy {
+            case .avoidOverwrite:
+                try fileManager.moveItemAtomically(at: temporaryOutputURL, to: outputURL)
+            case .overwriteExisting:
+                try fileManager.replaceItemAtomically(at: temporaryOutputURL, to: outputURL)
+            }
             return .succeeded(outputURL: outputURL)
         } catch {
             fileManager.removeItemIfPresent(at: temporaryOutputURL)
-            if let cocoaError = error as? CocoaError, cocoaError.code == .fileWriteFileExists {
+            if existingOutputPolicy == .avoidOverwrite,
+               let cocoaError = error as? CocoaError,
+               cocoaError.code == .fileWriteFileExists {
                 return .skipped(reason: .conflictExistingOutput)
             }
             return .failed(reason: .filesystem(error.localizedDescription))
