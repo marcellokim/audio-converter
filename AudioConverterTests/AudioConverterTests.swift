@@ -1,4 +1,6 @@
 import Foundation
+import AppKit
+import SwiftUI
 import XCTest
 @testable import AudioConverter
 
@@ -13,15 +15,39 @@ final class AudioConverterTests: XCTestCase {
     func testMainViewLayoutUsesTwoZoneWorkspaceAtDefaultWindowWidth() {
         let layout = MainViewLayout(windowWidth: 960)
 
-        XCTAssertEqual(layout.availableWidth, 924)
+        XCTAssertEqual(layout.availableWidth, 928)
         XCTAssertTrue(layout.prefersTwoColumn)
     }
 
     func testMainViewLayoutCollapsesAtMinimumWindowWidth() {
         let layout = MainViewLayout(windowWidth: 720)
 
-        XCTAssertEqual(layout.availableWidth, 684)
+        XCTAssertEqual(layout.availableWidth, 688)
         XCTAssertFalse(layout.prefersTwoColumn)
+    }
+
+    @MainActor
+    func testMainViewRendersInDefaultOneScreenCanvas() throws {
+        let state = makeReadyAppState()
+        try assertDefaultCanvasRender(
+            state: state,
+            artifactPath: "/tmp/audio-converter-layout-render.png"
+        )
+    }
+
+    @MainActor
+    func testMainViewMergeWorkspaceRendersInDefaultOneScreenCanvas() throws {
+        let state = makeReadyAppState()
+        state.operationMode = .mergeIntoOne
+        state.selectedFiles = [
+            URL(fileURLWithPath: "/tmp/ui-test-source-1.wav"),
+            URL(fileURLWithPath: "/tmp/ui-test-source-2.aiff")
+        ]
+
+        try assertDefaultCanvasRender(
+            state: state,
+            artifactPath: "/tmp/audio-converter-layout-render-merge.png"
+        )
     }
 
     func testCanStartConversionIsTrueWhenFilesExistAndFormatIsNotBlank() {
@@ -520,6 +546,47 @@ final class AudioConverterTests: XCTestCase {
         let store = UserDefaults(suiteName: suiteName)!
         store.removePersistentDomain(forName: suiteName)
         return store
+    }
+
+    @MainActor
+    private func assertDefaultCanvasRender(
+        state: AppState,
+        artifactPath: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
+        let view = ZStack {
+            Color(nsColor: .windowBackgroundColor)
+            MainView()
+                .environmentObject(state)
+        }
+        .environment(\.colorScheme, .dark)
+        .frame(width: 980, height: 760)
+
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 1
+
+        guard let image = renderer.nsImage else {
+            XCTFail("MainView should render into an NSImage at the default window size.", file: file, line: line)
+            return
+        }
+
+        XCTAssertEqual(image.size.width, 980, file: file, line: line)
+        XCTAssertEqual(image.size.height, 760, file: file, line: line)
+
+        let pngData = try XCTUnwrap(pngData(from: image), file: file, line: line)
+        XCTAssertGreaterThan(pngData.count, 16_000, file: file, line: line)
+
+        try pngData.write(to: URL(fileURLWithPath: artifactPath))
+    }
+
+    private func pngData(from image: NSImage) -> Data? {
+        guard let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData) else {
+            return nil
+        }
+
+        return bitmap.representation(using: .png, properties: [:])
     }
 }
 

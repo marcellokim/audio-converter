@@ -7,11 +7,23 @@ struct MainView: View {
         GeometryReader { proxy in
             let layout = MainViewLayout(windowWidth: proxy.size.width)
             let presentation = WorkspacePresentation(appState: appState)
+            let contentHeight = max(
+                proxy.size.height
+                    - (WorkspaceChrome.pagePadding * 2)
+                    - WorkspaceChrome.topBarHeight
+                    - WorkspaceChrome.pageSpacing,
+                0
+            )
 
             VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
                 topBar(using: presentation)
+                    .frame(height: WorkspaceChrome.topBarHeight)
 
-                workspace(for: layout, presentation: presentation)
+                workspace(
+                    for: layout,
+                    contentHeight: contentHeight,
+                    presentation: presentation
+                )
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             .padding(WorkspaceChrome.pagePadding)
@@ -21,12 +33,13 @@ struct MainView: View {
 
     private func workspace(
         for layout: MainViewLayout,
+        contentHeight: CGFloat,
         presentation: WorkspacePresentation
     ) -> some View {
         let secondaryWidth = layout.secondaryColumnWidth
 
         return HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
-            primaryLane
+            primaryLane(contentHeight: contentHeight)
                 .frame(
                     width: max(layout.availableWidth - secondaryWidth - WorkspaceChrome.pageSpacing, 300),
                     alignment: .topLeading
@@ -39,13 +52,21 @@ struct MainView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    private var primaryLane: some View {
-        VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
+    private func primaryLane(contentHeight: CGFloat) -> some View {
+        let statusHeight = min(max(contentHeight * 0.38, 220), 278)
+
+        return VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
             fileSelectionSection
                 .frame(maxHeight: .infinity, alignment: .top)
-            queueManagerSection
-            batchStatusSection
-                .frame(maxHeight: .infinity, alignment: .top)
+
+            HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
+                queueManagerSection
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+                batchStatusSection
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+            .frame(height: statusHeight, alignment: .top)
         }
         .frame(maxHeight: .infinity, alignment: .topLeading)
     }
@@ -72,9 +93,9 @@ struct MainView: View {
     private var queueManagerSection: some View {
         let snapshot = appState.queueDashboardSnapshot
 
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Label(snapshot.operationTitle, systemImage: isMergeMode ? "arrow.triangle.merge" : "square.stack.3d.up")
+                Label(isMergeMode ? "Merge queue" : "Batch queue", systemImage: isMergeMode ? "arrow.triangle.merge" : "square.stack.3d.up")
                     .font(WorkspaceType.bodyStrong)
 
                 Spacer(minLength: 0)
@@ -97,19 +118,18 @@ struct MainView: View {
             }
 
             if snapshot.totalTrackedCount > 0 {
-                ProgressView(
+                WorkspaceLinearProgress(
                     value: Double(snapshot.terminalCount),
-                    total: Double(max(snapshot.totalTrackedCount, 1))
+                    total: Double(max(snapshot.totalTrackedCount, 1)),
+                    color: .accentColor
                 )
-                .controlSize(.small)
-                .tint(.accentColor)
                 .accessibilityIdentifier("queue-progress")
             }
 
             schedulerControlSection(for: snapshot)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .workspaceSurface(tone: .muted, padding: 14)
+        .workspaceSurface(tone: .muted, padding: 12)
         .accessibilityIdentifier("queue-manager")
     }
 
@@ -133,42 +153,65 @@ struct MainView: View {
                     .monospacedDigit()
                     .accessibilityIdentifier("queue-active-slots")
             }
-            .workspaceInsetSurface(tone: .standard, padding: 10)
+            .workspaceInsetSurface(tone: .standard, padding: 8)
         } else {
             HStack(alignment: .center, spacing: 12) {
                 schedulerControls(snapshot: snapshot)
             }
-            .workspaceInsetSurface(tone: .standard, padding: 10)
+            .workspaceInsetSurface(tone: .standard, padding: 8)
         }
     }
 
     private func schedulerControls(snapshot: QueueDashboardSnapshot) -> some View {
         Group {
-            Toggle(
-                "Auto",
-                isOn: Binding(
-                    get: { appState.schedulerSettings.usesAutomaticConcurrency },
-                    set: { appState.setAutomaticSchedulingEnabled($0) }
+            Button {
+                appState.setAutomaticSchedulingEnabled(!appState.schedulerSettings.usesAutomaticConcurrency)
+            } label: {
+                Label(
+                    "Auto",
+                    systemImage: snapshot.usesAutomaticConcurrency ? "checkmark.circle.fill" : "circle"
+                )
+                .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(
+                WorkspaceCommandButtonStyle(
+                    tone: snapshot.usesAutomaticConcurrency ? .accent : .muted,
+                    isProminent: snapshot.usesAutomaticConcurrency
                 )
             )
-            .toggleStyle(.switch)
-            .controlSize(.small)
             .disabled(appState.isConverting)
             .accessibilityIdentifier("queue-auto-scheduler")
 
-            Stepper(
-                value: Binding(
-                    get: { appState.manualConcurrentJobLimit },
-                    set: { appState.updateManualConcurrentJobLimit($0) }
-                ),
-                in: QueueSchedulerSettings.minimumConcurrentJobLimit...QueueSchedulerSettings.maximumConcurrentJobLimit
-            ) {
+            HStack(spacing: 6) {
+                Button {
+                    appState.updateManualConcurrentJobLimit(appState.manualConcurrentJobLimit - 1)
+                } label: {
+                    Image(systemName: "minus")
+                }
+                .buttonStyle(WorkspaceIconButtonStyle(tone: .muted))
+                .disabled(
+                    appState.schedulerSettings.usesAutomaticConcurrency
+                        || appState.isConverting
+                        || appState.manualConcurrentJobLimit <= QueueSchedulerSettings.minimumConcurrentJobLimit
+                )
+
                 Text("Slots \(appState.manualConcurrentJobLimit)")
                     .font(WorkspaceType.metric)
                     .monospacedDigit()
+
+                Button {
+                    appState.updateManualConcurrentJobLimit(appState.manualConcurrentJobLimit + 1)
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .buttonStyle(WorkspaceIconButtonStyle(tone: .muted))
+                .disabled(
+                    appState.schedulerSettings.usesAutomaticConcurrency
+                        || appState.isConverting
+                        || appState.manualConcurrentJobLimit >= QueueSchedulerSettings.maximumConcurrentJobLimit
+                )
             }
-            .controlSize(.small)
-            .disabled(appState.schedulerSettings.usesAutomaticConcurrency || appState.isConverting)
+            .foregroundStyle(appState.schedulerSettings.usesAutomaticConcurrency ? .secondary : .primary)
             .accessibilityIdentifier("queue-manual-slots")
 
             Spacer(minLength: 0)
@@ -230,8 +273,8 @@ struct MainView: View {
                 .foregroundStyle(.secondary)
         }
         .font(WorkspaceType.metric)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .background(color.opacity(0.08), in: Capsule())
         .overlay(
             Capsule()
@@ -269,21 +312,21 @@ struct MainView: View {
                 mergeDestinationSection
             }
 
-            Divider()
-                .padding(.vertical, 2)
+            Spacer(minLength: 0)
 
             primaryActionSection(using: presentation.action)
         }
+        .frame(maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func topBar(using presentation: WorkspacePresentation) -> some View {
         HStack(alignment: .center, spacing: WorkspaceChrome.pageSpacing) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("AudioConverter")
                         .font(WorkspaceType.display)
 
-                    Text("Batch conversion and ordered merge in one workspace.")
+                    Text(isMergeMode ? "Ordered merge workspace" : "Batch conversion workspace")
                         .font(WorkspaceType.body)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -307,12 +350,19 @@ struct MainView: View {
     }
 
     private var operationModeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            WorkspaceSectionHeader(
-                eyebrow: "Workflow",
-                title: "Session type",
-                message: "Pick separate file exports or one ordered merge."
-            )
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 8) {
+                Label("Workflow", systemImage: "slider.horizontal.3")
+                    .font(WorkspaceType.bodyStrong)
+                    .foregroundStyle(.secondary)
+
+                Spacer(minLength: 0)
+
+                WorkspaceBadge(
+                    title: isMergeMode ? "Merge" : "Batch",
+                    tone: isMergeMode ? .accent : .muted
+                )
+            }
 
             HStack(spacing: 8) {
                 modeButton(
@@ -326,23 +376,25 @@ struct MainView: View {
                     identifier: "mode-merge"
                 )
             }
+
+            Text(isMergeMode ? "One ordered export from staged files." : "Separate outputs beside each source.")
+                .font(WorkspaceType.detail)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
-        .workspaceSurface(tone: .standard)
+        .workspaceSurface(tone: .standard, padding: 12)
     }
 
     private var mergeDestinationSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                WorkspaceSectionHeader(
-                    eyebrow: "Destination",
-                    title: "Merged export path",
-                    message: "Required before the ordered merge starts."
-                )
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 10) {
+                Label("Destination", systemImage: "folder")
+                    .font(WorkspaceType.bodyStrong)
 
                 Spacer(minLength: 0)
 
                 Button("Choose", action: handleSelectMergeDestination)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(WorkspaceCommandButtonStyle(tone: .accent, isProminent: true))
                     .disabled(!appState.canChooseMergeDestination)
                     .accessibilityIdentifier("select-merge-destination")
             }
@@ -354,33 +406,34 @@ struct MainView: View {
                     .truncationMode(.middle)
                     .accessibilityIdentifier("merge-destination-name")
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .workspaceInsetSurface(tone: .muted)
+                    .workspaceInsetSurface(tone: .muted, padding: 10)
             } else {
                 Text("No destination selected.")
                     .font(WorkspaceType.detail)
                     .foregroundStyle(.secondary)
-                    .workspaceInsetSurface(tone: .muted)
+                    .lineLimit(1)
+                    .workspaceInsetSurface(tone: .muted, padding: 10)
             }
         }
-        .workspaceSurface(tone: .standard)
+        .workspaceSurface(tone: .standard, padding: 12)
     }
 
     private func primaryActionSection(using action: WorkspacePresentation.Action) -> some View {
         let guidance = action.guidance
 
-        return VStack(alignment: .leading, spacing: isMergeMode ? 10 : 14) {
-            WorkspaceSectionHeader(
-                eyebrow: action.eyebrow,
-                title: action.title,
-                message: action.message
-            )
-
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) {
-                    actionButtons(using: action)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(action.eyebrow.uppercased())
+                        .font(WorkspaceType.caption)
+                        .foregroundStyle(.secondary)
+                    Text(action.title)
+                        .font(WorkspaceType.sectionTitle)
                 }
 
-                VStack(alignment: .leading, spacing: 10) {
+                Spacer(minLength: 0)
+
+                HStack(spacing: 8) {
                     actionButtons(using: action)
                 }
             }
@@ -392,7 +445,7 @@ struct MainView: View {
                 identifier: guidance.identifier
             )
         }
-        .workspaceSurface(tone: .standard)
+        .workspaceSurface(tone: .standard, padding: 12)
     }
 
     private func statusCallout(
@@ -408,29 +461,30 @@ struct MainView: View {
             Text(message)
                 .font(WorkspaceType.detail)
                 .foregroundStyle(tone == .warning ? Color.orange : .secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2)
+                .truncationMode(.tail)
                 .applyAccessibilityIdentifier(identifier)
         }
-        .workspaceInsetSurface(tone: tone)
+        .workspaceInsetSurface(tone: tone, padding: 10)
     }
 
     @ViewBuilder
     private func actionButtons(using action: WorkspacePresentation.Action) -> some View {
         Button(action.primaryButtonTitle, action: handleStartPrimaryAction)
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(WorkspaceCommandButtonStyle(tone: .accent, isProminent: true))
             .disabled(!action.canStartPrimaryAction)
             .accessibilityIdentifier(action.primaryButtonIdentifier)
 
         if action.showsCancelButton {
             Button(action.cancelButtonTitle, action: handleCancelConversion)
-                .buttonStyle(.bordered)
+                .buttonStyle(WorkspaceCommandButtonStyle(tone: .warning, isProminent: false))
                 .disabled(!action.canCancel)
                 .accessibilityIdentifier(action.cancelButtonIdentifier)
         }
 
         if action.showsRetryStartupButton {
             Button("Retry Startup Check", action: handleRetryStartupChecks)
-                .buttonStyle(.bordered)
+                .buttonStyle(WorkspaceCommandButtonStyle(tone: .warning, isProminent: false))
                 .accessibilityIdentifier("retry-startup-check")
         }
     }
@@ -445,13 +499,13 @@ struct MainView: View {
                 Button(title) {
                     appState.operationMode = mode
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(WorkspaceCommandButtonStyle(tone: .accent, isProminent: true))
                 .accessibilityIdentifier(identifier)
             } else {
                 Button(title) {
                     appState.operationMode = mode
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(WorkspaceCommandButtonStyle(tone: .muted, isProminent: false))
                 .accessibilityIdentifier(identifier)
             }
         }
@@ -868,17 +922,18 @@ struct MainViewLayout: Equatable {
 }
 
 enum WorkspaceChrome {
-    static let pagePadding: CGFloat = 18
+    static let pagePadding: CGFloat = 16
     static let pageSpacing: CGFloat = 12
-    static let surfacePadding: CGFloat = 16
-    static let insetPadding: CGFloat = 12
+    static let topBarHeight: CGFloat = 78
+    static let surfacePadding: CGFloat = 14
+    static let insetPadding: CGFloat = 10
     static let surfaceRadius: CGFloat = 8
     static let insetRadius: CGFloat = 6
 }
 
 enum WorkspaceType {
-    static let display = Font.system(size: 28, weight: .semibold)
-    static let sectionTitle = Font.system(size: 17, weight: .semibold)
+    static let display = Font.system(size: 25, weight: .semibold)
+    static let sectionTitle = Font.system(size: 16, weight: .semibold)
     static let bodyStrong = Font.system(size: 13, weight: .semibold)
     static let body = Font.system(size: 13, weight: .regular)
     static let detail = Font.system(size: 12, weight: .regular)
@@ -948,7 +1003,8 @@ struct WorkspaceSectionHeader: View {
             Text(message)
                 .font(WorkspaceType.body)
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2)
+                .truncationMode(.tail)
         }
     }
 }
@@ -983,6 +1039,173 @@ struct WorkspaceBadge: View {
         case .standard, .muted:
             return .secondary
         }
+    }
+}
+
+struct WorkspaceCommandButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    let tone: WorkspaceSurfaceTone
+    let isProminent: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(WorkspaceType.metric)
+            .foregroundStyle(foregroundColor)
+            .lineLimit(1)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .frame(minHeight: 28)
+            .background(backgroundColor(configuration: configuration), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .stroke(strokeColor, lineWidth: isProminent ? 0 : 1)
+            )
+            .opacity(isEnabled ? 1 : 0.46)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+    }
+
+    private var foregroundColor: Color {
+        if !isEnabled {
+            return .secondary
+        }
+
+        if isProminent {
+            return .white
+        }
+
+        switch tone {
+        case .accent:
+            return .accentColor
+        case .warning:
+            return .orange
+        case .critical:
+            return .red
+        case .success:
+            return .green
+        case .standard, .muted:
+            return .primary
+        }
+    }
+
+    private func backgroundColor(configuration: Configuration) -> Color {
+        if !isEnabled {
+            return Color.primary.opacity(0.06)
+        }
+
+        let base: Color
+        switch tone {
+        case .accent:
+            base = .accentColor
+        case .warning:
+            base = .orange
+        case .critical:
+            base = .red
+        case .success:
+            base = .green
+        case .standard, .muted:
+            base = .primary
+        }
+
+        if isProminent {
+            return base.opacity(configuration.isPressed ? 0.82 : 0.92)
+        }
+
+        return base.opacity(configuration.isPressed ? 0.16 : 0.08)
+    }
+
+    private var strokeColor: Color {
+        if !isEnabled {
+            return Color.primary.opacity(0.10)
+        }
+
+        return tone.strokeColor
+    }
+}
+
+struct WorkspaceIconButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    let tone: WorkspaceSurfaceTone
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(WorkspaceType.metric)
+            .foregroundStyle(isEnabled ? foregroundColor : .secondary)
+            .frame(width: 24, height: 24)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(tone.fillColor.opacity(configuration.isPressed ? 1.4 : 1))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(tone.strokeColor, lineWidth: 1)
+            )
+            .opacity(isEnabled ? 1 : 0.45)
+    }
+
+    private var foregroundColor: Color {
+        switch tone {
+        case .accent:
+            return .accentColor
+        case .warning:
+            return .orange
+        case .critical:
+            return .red
+        case .success:
+            return .green
+        case .standard, .muted:
+            return .secondary
+        }
+    }
+}
+
+struct WorkspaceLinearProgress: View {
+    let value: Double?
+    let total: Double
+    let color: Color
+
+    init(value: Double? = nil, total: Double = 1, color: Color = .accentColor) {
+        self.value = value
+        self.total = total
+        self.color = color
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let fraction = normalizedFraction
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.primary.opacity(0.08))
+
+                Capsule()
+                    .fill(color.opacity(0.8))
+                    .frame(width: max(proxy.size.width * fraction, fraction > 0 ? 4 : 0))
+            }
+        }
+        .frame(height: 6)
+        .accessibilityValue(progressAccessibilityValue)
+    }
+
+    private var normalizedFraction: Double {
+        guard let value else {
+            return 0.22
+        }
+
+        guard total > 0 else {
+            return 0
+        }
+
+        return min(max(value / total, 0), 1)
+    }
+
+    private var progressAccessibilityValue: String {
+        guard let value else {
+            return "In progress"
+        }
+
+        return "\(Int((min(max(value / max(total, 1), 0), 1) * 100).rounded())) percent"
     }
 }
 

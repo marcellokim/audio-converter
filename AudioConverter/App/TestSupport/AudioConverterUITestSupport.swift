@@ -6,7 +6,7 @@ struct UITestWindowSize {
     static let widthEnvironmentKey = "AUDIOCONVERTER_UI_TEST_WINDOW_WIDTH"
     static let heightEnvironmentKey = "AUDIOCONVERTER_UI_TEST_WINDOW_HEIGHT"
     static let launchArgument = "--uitest-window-size"
-    static let supportedValuesDescription = "width >= 720 and height >= 820"
+    static let supportedValuesDescription = "width >= 760 and height >= 680"
 
     let size: CGSize
 
@@ -16,8 +16,8 @@ struct UITestWindowSize {
               let rawHeight = environment[Self.heightEnvironmentKey],
               let width = Double(rawWidth),
               let height = Double(rawHeight),
-              width >= 720,
-              height >= 820 else {
+              width >= 760,
+              height >= 680 else {
             return nil
         }
 

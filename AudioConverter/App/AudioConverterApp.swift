@@ -16,7 +16,7 @@ struct AudioConverterApp: App {
         WindowGroup {
             MainView()
                 .environmentObject(appState)
-                .frame(minWidth: 720, minHeight: 820)
+                .frame(minWidth: 760, minHeight: 680)
                 .task {
                     appState.performStartupChecksIfNeeded()
                 }
@@ -162,6 +162,6 @@ struct AudioConverterApp: App {
         }
 #endif
 
-        return CGSize(width: 960, height: 920)
+        return CGSize(width: 980, height: 760)
     }
 }

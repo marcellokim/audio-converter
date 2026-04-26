@@ -59,17 +59,35 @@ final class AudioConverterUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Quick Start"].waitForExistence(timeout: 5))
     }
 
-    func testLaunchKeepsSingleRootScrollViewAndUniquePrimaryControls() {
+    func testLaunchKeepsOneScreenWorkspaceAndUniquePrimaryControls() {
         let app = makeApp(startupScenario: "always-ready")
         app.launch()
 
         _ = waitForEnabledSelectFilesButton(in: app)
 
-        XCTAssertEqual(app.scrollViews.count, 1)
+        XCTAssertEqual(app.scrollViews.count, 0)
         XCTAssertEqual(app.buttons.matching(identifier: "select-files").count, 1)
         XCTAssertEqual(app.buttons.matching(identifier: "mode-batch").count, 1)
         XCTAssertEqual(app.buttons.matching(identifier: "mode-merge").count, 1)
         XCTAssertEqual(app.buttons.matching(identifier: "start-conversion").count, 1)
+    }
+
+    func testDefaultLayoutKeepsCoreActionsInsideWindowWithoutScrolling() {
+        let app = makeApp(
+            startupScenario: "always-ready",
+            fileSelectionScenario: "multiple"
+        )
+        app.launch()
+
+        let selectFilesButton = waitForEnabledSelectFilesButton(in: app)
+        XCTAssertFrame(app.buttons["start-conversion"], isInsideWindowOf: app)
+        selectFilesButton.tap()
+        XCTAssertFrame(app.buttons["start-conversion"], isInsideWindowOf: app)
+
+        enterMergeMode(in: app)
+        XCTAssertFrame(app.buttons["select-merge-destination"], isInsideWindowOf: app)
+        XCTAssertFrame(app.buttons["start-merge"], isInsideWindowOf: app)
+        XCTAssertEqual(app.scrollViews.count, 0)
     }
 
     func testRetryStartupCheckButtonAppearsWhenStartupFails() {
@@ -491,6 +509,26 @@ final class AudioConverterUITests: XCTestCase {
         for _ in 0..<2 {
             scrollView.swipeUp()
         }
+    }
+
+    private func XCTAssertFrame(
+        _ element: XCUIElement,
+        isInsideWindowOf app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertTrue(element.waitForExistence(timeout: 5), file: file, line: line)
+
+        let window = app.windows.firstMatch
+        XCTAssertTrue(window.waitForExistence(timeout: 5), file: file, line: line)
+
+        let windowFrame = window.frame.insetBy(dx: -1, dy: -1)
+        XCTAssertTrue(
+            windowFrame.contains(element.frame),
+            "\(element.identifier) frame \(element.frame) should be inside window frame \(window.frame)",
+            file: file,
+            line: line
+        )
     }
 
 }

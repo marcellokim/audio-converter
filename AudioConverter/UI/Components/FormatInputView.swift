@@ -5,39 +5,28 @@ struct FormatInputView: View {
     let formats: [SupportedFormat]
     let isEnabled: Bool
 
-    private var supportedFormatsSummary: String {
-        formats.map(\.id).joined(separator: " · ")
-    }
-
     private var selectedFormatKey: String {
         FormatRegistry.normalizedKey(for: outputFormat)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            WorkspaceSectionHeader(
-                eyebrow: "Format",
-                title: "Output format",
-                message: "Type an extension or choose a chip."
-            )
-
             HStack(alignment: .center, spacing: 8) {
-                TextField("mp3", text: $outputFormat)
-                    .textFieldStyle(.roundedBorder)
-                    .font(WorkspaceType.detail)
-                    .disabled(!isEnabled)
-                    .accessibilityLabel("Output format")
+                Label("Format", systemImage: "music.note")
+                    .font(WorkspaceType.bodyStrong)
+                    .foregroundStyle(.secondary)
 
-                if !selectedFormatKey.isEmpty {
-                    WorkspaceBadge(
-                        title: selectedFormatKey.uppercased(),
-                        tone: isEnabled ? .success : .muted
-                    )
-                }
+                Spacer(minLength: 0)
+
+                WorkspaceBadge(
+                    title: selectedFormatTitle,
+                    tone: selectedFormatTone
+                )
+                .accessibilityLabel("Output format \(selectedFormatTitle)")
             }
 
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 56), spacing: 8, alignment: .leading)],
+                columns: [GridItem(.adaptive(minimum: 56), spacing: 7, alignment: .leading)],
                 alignment: .leading,
                 spacing: 6
             ) {
@@ -75,11 +64,23 @@ struct FormatInputView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
-        .workspaceSurface(tone: .standard)
+        .workspaceSurface(tone: .standard, padding: 12)
     }
 
     private var fieldGuidance: String {
-        isEnabled ? "Supported formats: \(supportedFormatsSummary)" : "Format changes pause while a conversion or merge is running."
+        isEnabled ? "Tap a chip to choose the output container." : "Format changes pause while work is running."
+    }
+
+    private var selectedFormatTitle: String {
+        selectedFormatKey.isEmpty ? "Select" : selectedFormatKey.uppercased()
+    }
+
+    private var selectedFormatTone: WorkspaceSurfaceTone {
+        if selectedFormatKey.isEmpty {
+            return .warning
+        }
+
+        return isEnabled ? .success : .muted
     }
 
     private func isSelected(_ format: SupportedFormat) -> Bool {

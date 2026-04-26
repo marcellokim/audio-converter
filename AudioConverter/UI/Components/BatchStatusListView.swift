@@ -6,7 +6,7 @@ struct BatchStatusListView: View {
     private let maxVisibleSnapshots = 3
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             WorkspaceSectionHeader(
                 eyebrow: "Batch status",
                 title: "Activity",
@@ -22,7 +22,7 @@ struct BatchStatusListView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .workspaceSurface(tone: .standard)
+        .workspaceSurface(tone: .standard, padding: 12)
     }
 
     private var emptyState: some View {
@@ -38,17 +38,17 @@ struct BatchStatusListView: View {
                 Text("Queued, running, skipped, cancelled, and completed files will appear once work starts.")
                     .font(WorkspaceType.body)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(2)
             }
         }
-        .workspaceInsetSurface(tone: .muted)
+        .workspaceInsetSurface(tone: .muted, padding: 10)
     }
 
     private var populatedState: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 7) {
             summaryPills
 
-            VStack(spacing: 8) {
+            VStack(spacing: 7) {
                 ForEach(visibleSnapshots) { snapshot in
                     snapshotRow(snapshot)
                 }
@@ -67,24 +67,24 @@ struct BatchStatusListView: View {
 
     private var summaryPills: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(Array(summaryItems.enumerated()), id: \.offset) { entry in
                     summaryPill(entry.element)
                 }
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 8)], alignment: .leading, spacing: 8) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 6)], alignment: .leading, spacing: 6) {
                 ForEach(Array(summaryItems.enumerated()), id: \.offset) { entry in
                     summaryPill(entry.element)
                 }
             }
         }
-        .workspaceInsetSurface(tone: .muted, padding: 8)
+        .workspaceInsetSurface(tone: .muted, padding: 7)
     }
 
     private func snapshotRow(_ snapshot: BatchStatusSnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .top, spacing: 10) {
                 Circle()
                     .fill(accentColor(for: snapshot.state))
                     .frame(width: 8, height: 8)
@@ -118,7 +118,7 @@ struct BatchStatusListView: View {
                 progressView(for: snapshot)
             }
         }
-        .workspaceInsetSurface(tone: tone(for: snapshot.state), padding: 10)
+        .workspaceInsetSurface(tone: tone(for: snapshot.state), padding: 8)
     }
 
     private func summaryPill(_ item: (label: String, count: Int, color: Color)) -> some View {
@@ -144,12 +144,10 @@ struct BatchStatusListView: View {
     private func progressView(for snapshot: BatchStatusSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             if let value = snapshot.fractionCompleted {
-                ProgressView(value: value, total: 1)
-                    .tint(accentColor(for: snapshot.state))
+                WorkspaceLinearProgress(value: value, total: 1, color: accentColor(for: snapshot.state))
                     .accessibilityIdentifier("batch-progress-\(snapshot.fileName)")
             } else {
-                ProgressView()
-                    .tint(accentColor(for: snapshot.state))
+                WorkspaceLinearProgress(color: accentColor(for: snapshot.state))
                     .accessibilityIdentifier("batch-progress-\(snapshot.fileName)")
             }
 

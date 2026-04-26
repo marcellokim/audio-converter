@@ -12,10 +12,10 @@ struct FileSelectionView: View {
     let canReorderFiles: Bool
     let isMergeMode: Bool
 
-    private let maxVisibleFiles = 4
+    private let maxVisibleFiles = 3
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             header
 
             Text(selectionStatusMessage)
@@ -24,13 +24,15 @@ struct FileSelectionView: View {
                 .lineLimit(1)
 
             if files.isEmpty {
+                Spacer(minLength: 0)
                 emptyState
+                Spacer(minLength: 0)
             } else {
                 stagedFileList
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .workspaceSurface(tone: .standard)
+        .workspaceSurface(tone: .standard, padding: 12)
     }
 
     private var header: some View {
@@ -41,7 +43,7 @@ struct FileSelectionView: View {
                 Text(sectionMessage)
                     .font(WorkspaceType.body)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
 
             Spacer()
@@ -49,14 +51,12 @@ struct FileSelectionView: View {
             HStack(spacing: 8) {
                 if !files.isEmpty && canRemoveFiles {
                     Button("Clear", action: onClearAll)
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .accessibilityIdentifier("clear-files")
+                    .buttonStyle(WorkspaceCommandButtonStyle(tone: .muted, isProminent: false))
+                    .accessibilityIdentifier("clear-files")
                 }
 
                 Button("Select Files", action: action)
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
+                    .buttonStyle(WorkspaceCommandButtonStyle(tone: .accent, isProminent: true))
                     .disabled(!canBrowseFiles)
                     .accessibilityIdentifier("select-files")
             }
@@ -80,15 +80,15 @@ struct FileSelectionView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 64 - WorkspaceChrome.insetPadding * 2, alignment: .leading)
-        .workspaceInsetSurface(tone: canBrowseFiles ? .muted : .warning)
+        .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+        .workspaceInsetSurface(tone: canBrowseFiles ? .muted : .warning, padding: 10)
         .accessibilityIdentifier("quick-start-card")
     }
 
     private var stagedFileList: some View {
         VStack(spacing: 8) {
             ForEach(Array(visibleFiles.enumerated()), id: \.element.id) { index, file in
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     Image(systemName: isMergeMode ? "arrow.up.arrow.down.circle" : "waveform")
                         .foregroundStyle(Color.accentColor)
 
@@ -117,7 +117,7 @@ struct FileSelectionView: View {
                                 Label("Move Up", systemImage: "arrow.up")
                                     .labelStyle(.iconOnly)
                             }
-                            .buttonStyle(.borderless)
+                            .buttonStyle(WorkspaceIconButtonStyle(tone: .muted))
                             .disabled(!canReorderFiles || index == 0)
                             .accessibilityIdentifier("move-staged-file-up-\(file.displayName)")
 
@@ -127,7 +127,7 @@ struct FileSelectionView: View {
                                 Label("Move Down", systemImage: "arrow.down")
                                     .labelStyle(.iconOnly)
                             }
-                            .buttonStyle(.borderless)
+                            .buttonStyle(WorkspaceIconButtonStyle(tone: .muted))
                             .disabled(!canReorderFiles || isLastFile(file))
                             .accessibilityIdentifier("move-staged-file-down-\(file.displayName)")
                         }
@@ -139,13 +139,13 @@ struct FileSelectionView: View {
                                 Label("Remove", systemImage: "xmark.circle.fill")
                                     .labelStyle(.iconOnly)
                             }
-                            .buttonStyle(.borderless)
+                            .buttonStyle(WorkspaceIconButtonStyle(tone: .critical))
                             .accessibilityIdentifier("remove-staged-file-\(file.displayName)")
                         }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .workspaceInsetSurface(tone: .muted, padding: 10)
+                .workspaceInsetSurface(tone: .muted, padding: 8)
             }
 
             if hiddenFileCount > 0 {

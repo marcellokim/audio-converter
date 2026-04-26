@@ -22,15 +22,17 @@ struct StatusBannerView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(WorkspaceType.bodyStrong)
+                    .lineLimit(1)
                 Text(message)
                     .font(WorkspaceType.detail)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                     .textSelection(.enabled)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .workspaceSurface(tone: surfaceTone, padding: 12)
+        .workspaceSurface(tone: surfaceTone, padding: 10)
         .accessibilityElement(children: .combine)
     }
 
