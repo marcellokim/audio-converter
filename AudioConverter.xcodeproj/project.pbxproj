@@ -31,6 +31,7 @@
 		670E538194CB52B33EB7007E /* MergeExportSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C4A3C08E7AF50D0AA842FF0 /* MergeExportSession.swift */; };
 		67DDD045DFAAC390B43105B8 /* FFmpegStartupSelfCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDA251C2DB14505A0AE954B8 /* FFmpegStartupSelfCheck.swift */; };
 		6873DB86699AC4E7236079B0 /* AudioConverterUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDF519152A56EF9EAA246ABC /* AudioConverterUITests.swift */; };
+		689810E896AF3FFA37029D7E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 11E41DE679744520899E75D7 /* Assets.xcassets */; };
 		6A70ABBED8BED6B3FEA07F34 /* StubOpenPanelAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC094A902FD8658591378BC2 /* StubOpenPanelAdapter.swift */; };
 		6AA9ECEC9B30DDCF31A1C87C /* ConversionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAADE98D734F1016FEFE5831 /* ConversionEngine.swift */; };
 		71DD07708E6940FA564563B3 /* StubCapabilityChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202D1178EBCD29EB012AD48F /* StubCapabilityChecker.swift */; };
@@ -93,6 +94,7 @@
 		05B5C971BE5487BC47C796C8 /* FormatValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatValidatorTests.swift; sourceTree = "<group>"; };
 		0AC90D26CC05A88A26CBB273 /* SkipReason.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkipReason.swift; sourceTree = "<group>"; };
 		0C7F18A285DF6A1DD56692F4 /* RealFFmpegIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealFFmpegIntegrationTests.swift; sourceTree = "<group>"; };
+		11E41DE679744520899E75D7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		17EE4532AD00C3A6AFF09415 /* Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Release.entitlements; sourceTree = "<group>"; };
 		18C1482E6C52785A9BD18A31 /* InputDurationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputDurationProvider.swift; sourceTree = "<group>"; };
 		202D1178EBCD29EB012AD48F /* StubCapabilityChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubCapabilityChecker.swift; sourceTree = "<group>"; };
@@ -338,6 +340,7 @@
 		D86C205877434138BB0DA612 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				11E41DE679744520899E75D7 /* Assets.xcassets */,
 				6C8CFE9A8CAD2AA3DB914104 /* ffmpeg */,
 			);
 			path = Resources;
@@ -397,6 +400,7 @@
 			buildConfigurationList = A19A7AC40A3F23D4F5A727FD /* Build configuration list for PBXNativeTarget "AudioConverter" */;
 			buildPhases = (
 				E64197B4C5CB1B09B57B81BE /* Sources */,
+				8C31DFE2B4634B56A7F6E00F /* Resources */,
 				9C09727464CE149E32EF3560 /* Embed vendored ffmpeg */,
 			);
 			buildRules = (
@@ -451,6 +455,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8C31DFE2B4634B56A7F6E00F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				689810E896AF3FFA37029D7E /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		9C09727464CE149E32EF3560 /* Embed vendored ffmpeg */ = {
