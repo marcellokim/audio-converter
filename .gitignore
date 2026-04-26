@@ -1,4 +1,11 @@
 .DS_Store
+*.log
+*.xcresult
+
+# Local environment files
+.env
+.env.*
+!.env.example
 
 # Xcode user-specific data
 xcuserdata/
