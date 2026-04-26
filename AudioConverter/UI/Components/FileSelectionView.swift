@@ -57,35 +57,22 @@ struct FileSelectionView: View {
     }
 
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Quick Start")
-                .font(WorkspaceType.bodyStrong)
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: canBrowseFiles ? "plus.square.dashed" : "clock")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(canBrowseFiles ? Color.accentColor : .secondary)
+                .frame(width: 24)
 
-            VStack(alignment: .leading, spacing: 8) {
-                instructionStep(
-                    number: 1,
-                    text: canBrowseFiles
-                        ? (isMergeMode ? "Select two or more source files." : "Select one or more source files.")
-                        : "Wait for the bundled ffmpeg startup check to finish."
-                )
-                instructionStep(number: 2, text: "Choose an output format.")
-                instructionStep(
-                    number: 3,
-                    text: isMergeMode
-                        ? "Choose the merge destination, then start the export."
-                        : "Start the conversion batch."
-                )
+            VStack(alignment: .leading, spacing: 4) {
+                Text(canBrowseFiles ? "No source files staged" : "Waiting for startup check")
+                    .font(WorkspaceType.bodyStrong)
+                Text(emptyStateMessage)
+                    .font(WorkspaceType.detail)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            Text(
-                canBrowseFiles
-                    ? "The workspace keeps the next required action visible as you progress."
-                    : "If startup checks fail, use Retry Startup Check in the action panel before trying again."
-            )
-            .font(WorkspaceType.detail)
-            .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 108 - WorkspaceChrome.insetPadding * 2, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 72 - WorkspaceChrome.insetPadding * 2, alignment: .leading)
         .workspaceInsetSurface(tone: canBrowseFiles ? .muted : .warning)
         .accessibilityIdentifier("quick-start-card")
     }
@@ -181,15 +168,13 @@ struct FileSelectionView: View {
             : "\(files.count) file(s) staged. Converted outputs stay beside each original file."
     }
 
-    private func instructionStep(number: Int, text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text("\(number).")
-                .font(WorkspaceType.bodyStrong)
-                .foregroundStyle(Color.accentColor)
-            Text(text)
-                .font(WorkspaceType.body)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+    private var emptyStateMessage: String {
+        if !canBrowseFiles {
+            return "File selection unlocks after the bundled ffmpeg check succeeds."
         }
+
+        return isMergeMode
+            ? "Select at least two files, order them, then choose a destination."
+            : "Select one or more files to prepare the conversion queue."
     }
 }

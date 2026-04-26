@@ -61,7 +61,7 @@ final class ConversionCoordinatorTests: XCTestCase {
         XCTAssertEqual(fileManager.removedURLs, [URL(fileURLWithPath: "/tmp/temp-fail.flac")])
     }
 
-    func testMakeSessionPublishesStableLiveUpdatesAndRunsSerially() throws {
+    func testMakeSessionPublishesStableLiveUpdatesAndRunsSeriallyWhenLimitedToOneJob() throws {
         let fileManager = MockFileManager()
         let runner = MockFFmpegRunner()
         let firstTask = MockFFmpegRunner.Task()
@@ -75,7 +75,7 @@ final class ConversionCoordinatorTests: XCTestCase {
             ffmpegRunner: runner,
             inputDurationProvider: FixedInputDurationProvider(durationSeconds: 10)
         )
-        let coordinator = ConversionCoordinator(engine: engine, presenter: BatchStatusPresenter(), maximumConcurrentJobs: 2)
+        let coordinator = ConversionCoordinator(engine: engine, presenter: BatchStatusPresenter(), maximumConcurrentJobs: 1)
         let files = [
             SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/intro.wav")),
             SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/outro.aiff"))
@@ -147,6 +147,189 @@ final class ConversionCoordinatorTests: XCTestCase {
         let initialIDs = try XCTUnwrap(capturedUpdates.first?.map(\.id))
         XCTAssertTrue(capturedUpdates.allSatisfy { $0.count == 2 })
         XCTAssertTrue(capturedUpdates.allSatisfy { $0[0].id == initialIDs[0] && $0[1].id == initialIDs[1] })
+    }
+
+    func testMakeSessionStartsUpToMaximumConcurrentJobs() throws {
+        let fileManager = MockFileManager()
+        let runner = MockFFmpegRunner()
+        let firstTask = MockFFmpegRunner.Task()
+        let secondTask = MockFFmpegRunner.Task()
+        let thirdTask = MockFFmpegRunner.Task(
+            result: .success(FFmpegRunResult(terminationStatus: 0, standardOutput: "", standardError: ""))
+        )
+        runner.startResults = [.success(firstTask), .success(secondTask), .success(thirdTask)]
+
+        let engine = ConversionEngine(fileManager: fileManager, ffmpegRunner: runner)
+        let coordinator = ConversionCoordinator(engine: engine, presenter: BatchStatusPresenter(), maximumConcurrentJobs: 2)
+        let files = [
+            SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/intro.wav")),
+            SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/verse.wav")),
+            SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/outro.aiff"))
+        ]
+        let format = try XCTUnwrap(FormatRegistry.format(for: "mp3"))
+        let completion = expectation(description: "session completed")
+        let lock = NSLock()
+        var updates: [[BatchStatusSnapshot]] = []
+        var observedTwoRunning = false
+        var observedThirdRunningAfterFirstFinished = false
+
+        let session = coordinator.makeSession(
+            files: files,
+            format: format,
+            ffmpegURL: URL(fileURLWithPath: "/bin/sh"),
+            onUpdate: { snapshots in
+                lock.lock()
+                updates.append(snapshots)
+                lock.unlock()
+
+                if !observedTwoRunning, snapshots.map(\.state) == [.running, .running, .queued] {
+                    observedTwoRunning = true
+                    XCTAssertEqual(runner.invocations.count, 2)
+                }
+                if snapshots.map(\.state) == [
+                    .succeeded(outputURL: URL(fileURLWithPath: "/tmp/intro.mp3")),
+                    .running,
+                    .running
+                ] {
+                    observedThirdRunningAfterFirstFinished = true
+                }
+            },
+            onCompletion: { snapshots in
+                lock.lock()
+                updates.append(snapshots)
+                lock.unlock()
+                completion.fulfill()
+            }
+        )
+
+        session.start()
+
+        let twoRunningExpectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                lock.lock()
+                defer { lock.unlock() }
+                return observedTwoRunning
+            },
+            object: nil
+        )
+        wait(for: [twoRunningExpectation], timeout: 2)
+
+        XCTAssertEqual(runner.invocations.count, 2, "Third job should wait for a free scheduler slot.")
+
+        firstTask.complete(
+            with: .success(
+                FFmpegRunResult(terminationStatus: 0, standardOutput: "", standardError: "")
+            )
+        )
+
+        let thirdRunningExpectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                lock.lock()
+                defer { lock.unlock() }
+                return observedThirdRunningAfterFirstFinished
+            },
+            object: nil
+        )
+        wait(for: [thirdRunningExpectation], timeout: 2)
+
+        secondTask.complete(
+            with: .success(
+                FFmpegRunResult(terminationStatus: 0, standardOutput: "", standardError: "")
+            )
+        )
+        wait(for: [completion], timeout: 2)
+
+        lock.lock()
+        let capturedUpdates = updates
+        lock.unlock()
+
+        XCTAssertTrue(capturedUpdates.contains { $0.map(\.state) == [.running, .running, .queued] })
+        XCTAssertTrue(capturedUpdates.contains { $0.map(\.state) == [.succeeded(outputURL: URL(fileURLWithPath: "/tmp/intro.mp3")), .running, .running] })
+        XCTAssertEqual(capturedUpdates.last?.map(\.state), [
+            .succeeded(outputURL: URL(fileURLWithPath: "/tmp/intro.mp3")),
+            .succeeded(outputURL: URL(fileURLWithPath: "/tmp/verse.mp3")),
+            .succeeded(outputURL: URL(fileURLWithPath: "/tmp/outro.mp3"))
+        ])
+        XCTAssertEqual(runner.invocations.count, 3)
+    }
+
+    func testMakeSessionSkipsOverQueuedItemsWithReservedOutputURL() throws {
+        let fileManager = MockFileManager()
+        let runner = MockFFmpegRunner()
+        let firstTask = MockFFmpegRunner.Task()
+        let otherOutputTask = MockFFmpegRunner.Task()
+        runner.startResults = [.success(firstTask), .success(otherOutputTask)]
+
+        let engine = ConversionEngine(fileManager: fileManager, ffmpegRunner: runner)
+        let coordinator = ConversionCoordinator(engine: engine, presenter: BatchStatusPresenter(), maximumConcurrentJobs: 2)
+        let files = [
+            SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/song.wav")),
+            SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/song.aiff")),
+            SelectedAudioFile(url: URL(fileURLWithPath: "/tmp/other.wav"))
+        ]
+        let format = try XCTUnwrap(FormatRegistry.format(for: "mp3"))
+        let completion = expectation(description: "session completed")
+        let lock = NSLock()
+        var updates: [[BatchStatusSnapshot]] = []
+        var observedNonConflictingWave = false
+
+        let session = coordinator.makeSession(
+            files: files,
+            format: format,
+            ffmpegURL: URL(fileURLWithPath: "/bin/sh"),
+            onUpdate: { snapshots in
+                lock.lock()
+                updates.append(snapshots)
+                if snapshots.map(\.state) == [.running, .queued, .running] {
+                    observedNonConflictingWave = true
+                }
+                lock.unlock()
+            },
+            onCompletion: { snapshots in
+                lock.lock()
+                updates.append(snapshots)
+                lock.unlock()
+                completion.fulfill()
+            }
+        )
+
+        session.start()
+
+        let nonConflictingWaveExpectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                lock.lock()
+                defer { lock.unlock() }
+                return observedNonConflictingWave
+            },
+            object: nil
+        )
+        wait(for: [nonConflictingWaveExpectation], timeout: 2)
+
+        XCTAssertEqual(runner.invocations.count, 2, "The second song item shares the first output URL and should stay queued.")
+
+        firstTask.complete(
+            with: .success(
+                FFmpegRunResult(terminationStatus: 0, standardOutput: "", standardError: "")
+            )
+        )
+        otherOutputTask.complete(
+            with: .success(
+                FFmpegRunResult(terminationStatus: 0, standardOutput: "", standardError: "")
+            )
+        )
+        wait(for: [completion], timeout: 2)
+
+        lock.lock()
+        let capturedUpdates = updates
+        lock.unlock()
+
+        XCTAssertTrue(capturedUpdates.contains { $0.map(\.state) == [.running, .queued, .running] })
+        XCTAssertEqual(capturedUpdates.last?.map(\.state), [
+            .succeeded(outputURL: URL(fileURLWithPath: "/tmp/song.mp3")),
+            .skipped(reason: .conflictExistingOutput),
+            .succeeded(outputURL: URL(fileURLWithPath: "/tmp/other.mp3"))
+        ])
+        XCTAssertEqual(runner.invocations.count, 2)
     }
 
     func testMakeSessionCancelAllCancelsQueuedItemsImmediatelyAndStopsLaterStarts() throws {

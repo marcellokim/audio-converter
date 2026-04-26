@@ -72,8 +72,8 @@ final class UITestStartupScenario {
     ) -> AppState {
         let fallbackURL = URL(fileURLWithPath: "/bin/sh")
         let ffmpegURL = FFmpegBinaryResolver.bundledBinaryURL() ?? fallbackURL
-        let conversionSessionFactory = makeConversionSession ?? { files, format, ffmpegURL, onUpdate, onCompletion in
-            ConversionCoordinator().makeSession(
+        let conversionSessionFactory = makeConversionSession ?? { files, format, ffmpegURL, maximumConcurrentJobs, onUpdate, onCompletion in
+            ConversionCoordinator(maximumConcurrentJobs: maximumConcurrentJobs).makeSession(
                 files: files,
                 format: format,
                 ffmpegURL: ffmpegURL,
@@ -151,7 +151,7 @@ final class UITestConversionScenario {
     }
 
     func makeConversionSessionFactory() -> AppState.ConversionSessionFactory {
-        { [mode] files, format, _, onUpdate, onCompletion in
+        { [mode] files, format, _, _, onUpdate, onCompletion in
             UITestConversionSession(
                 files: files,
                 format: format,

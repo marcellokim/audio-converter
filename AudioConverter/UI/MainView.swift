@@ -48,6 +48,7 @@ struct MainView: View {
         } else {
             VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
                 fileSelectionSection
+                queueManagerSection
                 secondaryLane(using: presentation)
                 batchStatusSection
             }
@@ -58,6 +59,7 @@ struct MainView: View {
     private var primaryLane: some View {
         VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
             fileSelectionSection
+            queueManagerSection
             batchStatusSection
         }
     }
@@ -81,6 +83,192 @@ struct MainView: View {
         BatchStatusListView(snapshots: appState.batchSnapshots)
     }
 
+    private var queueManagerSection: some View {
+        let snapshot = appState.queueDashboardSnapshot
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Label(snapshot.operationTitle, systemImage: isMergeMode ? "arrow.triangle.merge" : "square.stack.3d.up")
+                    .font(WorkspaceType.bodyStrong)
+
+                Spacer(minLength: 0)
+
+                Text(queueManagerMessage(for: snapshot))
+                    .font(WorkspaceType.metric)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    queueStatusPills(for: snapshot)
+                }
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], alignment: .leading, spacing: 8) {
+                    queueStatusPills(for: snapshot)
+                }
+            }
+
+            if snapshot.totalTrackedCount > 0 {
+                ProgressView(
+                    value: Double(snapshot.terminalCount),
+                    total: Double(max(snapshot.totalTrackedCount, 1))
+                )
+                .controlSize(.small)
+                .tint(.accentColor)
+                .accessibilityIdentifier("queue-progress")
+            }
+
+            schedulerControlSection(for: snapshot)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .workspaceSurface(tone: .muted, padding: 14)
+        .accessibilityIdentifier("queue-manager")
+    }
+
+    @ViewBuilder
+    private func schedulerControlSection(for snapshot: QueueDashboardSnapshot) -> some View {
+        if isMergeMode {
+            HStack(alignment: .center, spacing: 8) {
+                Image(systemName: "lock")
+                    .font(WorkspaceType.metric)
+                    .foregroundStyle(.secondary)
+
+                Text("One ordered merge slot")
+                    .font(WorkspaceType.metric)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("queue-scheduler-mode")
+
+                Spacer(minLength: 0)
+
+                Text("\(snapshot.effectiveConcurrentJobLimit)")
+                    .font(WorkspaceType.metric)
+                    .monospacedDigit()
+                    .accessibilityIdentifier("queue-active-slots")
+            }
+            .workspaceInsetSurface(tone: .standard, padding: 10)
+        } else {
+            HStack(alignment: .center, spacing: 12) {
+                schedulerControls(snapshot: snapshot)
+            }
+            .workspaceInsetSurface(tone: .standard, padding: 10)
+        }
+    }
+
+    private func schedulerControls(snapshot: QueueDashboardSnapshot) -> some View {
+        Group {
+            Toggle(
+                "Auto",
+                isOn: Binding(
+                    get: { appState.schedulerSettings.usesAutomaticConcurrency },
+                    set: { appState.setAutomaticSchedulingEnabled($0) }
+                )
+            )
+            .toggleStyle(.switch)
+            .controlSize(.small)
+            .disabled(appState.isConverting)
+            .accessibilityIdentifier("queue-auto-scheduler")
+
+            Stepper(
+                value: Binding(
+                    get: { appState.manualConcurrentJobLimit },
+                    set: { appState.updateManualConcurrentJobLimit($0) }
+                ),
+                in: QueueSchedulerSettings.minimumConcurrentJobLimit...QueueSchedulerSettings.maximumConcurrentJobLimit
+            ) {
+                Text("Slots \(appState.manualConcurrentJobLimit)")
+                    .font(WorkspaceType.metric)
+                    .monospacedDigit()
+            }
+            .controlSize(.small)
+            .disabled(appState.schedulerSettings.usesAutomaticConcurrency || appState.isConverting)
+            .accessibilityIdentifier("queue-manual-slots")
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 6) {
+                Text(snapshot.usesAutomaticConcurrency ? "CPU" : "Manual")
+                    .font(WorkspaceType.metric)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("queue-scheduler-mode")
+
+                Text("\(snapshot.effectiveConcurrentJobLimit)")
+                    .font(WorkspaceType.metric)
+                    .monospacedDigit()
+                    .foregroundStyle(appState.isConverting ? Color.accentColor : .secondary)
+                    .accessibilityIdentifier("queue-active-slots")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func queueStatusPills(for snapshot: QueueDashboardSnapshot) -> some View {
+        queueStatusPill(
+            title: "staged",
+            value: snapshot.totalTrackedCount,
+            color: .secondary,
+            identifier: "queue-total-count"
+        )
+        queueStatusPill(
+            title: "queued",
+            value: snapshot.queuedCount,
+            color: .secondary,
+            identifier: "queue-queued-count"
+        )
+        queueStatusPill(
+            title: "running",
+            value: snapshot.runningCount,
+            color: .orange,
+            identifier: "queue-running-count"
+        )
+        queueStatusPill(
+            title: "done",
+            value: snapshot.terminalCount,
+            color: .green,
+            identifier: "queue-finished-count"
+        )
+    }
+
+    private func queueStatusPill(
+        title: String,
+        value: Int,
+        color: Color,
+        identifier: String
+    ) -> some View {
+        HStack(spacing: 4) {
+            Text("\(value)")
+                .monospacedDigit()
+                .accessibilityIdentifier(identifier)
+            Text(title)
+                .foregroundStyle(.secondary)
+        }
+        .font(WorkspaceType.metric)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(color.opacity(0.08), in: Capsule())
+        .overlay(
+            Capsule()
+                .stroke(color.opacity(0.16), lineWidth: 1)
+        )
+    }
+
+    private func queueManagerMessage(for snapshot: QueueDashboardSnapshot) -> String {
+        if isMergeMode {
+            return snapshot.totalTrackedCount == 0 ? "waiting for files" : "ordered export"
+        }
+
+        if appState.isConverting {
+            return "\(snapshot.runningCount) running / \(snapshot.queuedCount) queued"
+        }
+
+        if snapshot.usesAutomaticConcurrency {
+            return "auto slots"
+        }
+
+        return "manual \(snapshot.effectiveConcurrentJobLimit) slots"
+    }
+
     private func secondaryLane(using presentation: WorkspacePresentation) -> some View {
         VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
             operationModeSection
@@ -96,57 +284,51 @@ struct MainView: View {
             }
 
             Divider()
-                .padding(.vertical, 4)
+                .padding(.vertical, 2)
 
             primaryActionSection(using: presentation.action)
         }
     }
 
     private func header(using presentation: WorkspacePresentation) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("AudioConverter")
-                        .font(WorkspaceType.display)
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("AudioConverter")
+                    .font(WorkspaceType.display)
 
-                    Text("Batch convert audio or stage a deliberate order for one merged export, all inside a single adaptive workspace.")
-                        .font(WorkspaceType.body)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 0)
-
-                WorkspaceBadge(
-                    title: presentation.headerBadge.title,
-                    tone: presentation.headerBadge.tone
-                )
+                Text("Convert batches or merge ordered source files with live queue control.")
+                    .font(WorkspaceType.body)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            Text("The window keeps one scroll surface, stable selectors, and clearer separation between staging, export controls, and live status.")
-                .font(WorkspaceType.detail)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+
+            WorkspaceBadge(
+                title: presentation.headerBadge.title,
+                tone: presentation.headerBadge.tone
+            )
         }
-        .workspaceSurface(tone: .standard)
+        .padding(.vertical, 2)
     }
 
     private var operationModeSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             WorkspaceSectionHeader(
                 eyebrow: "Workflow",
-                title: "Choose the session type",
-                message: "Switch between per-file conversion and one ordered merge without duplicating any interactive controls."
+                title: "Session type",
+                message: "Pick separate file exports or one ordered merge."
             )
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 modeButton(
-                    title: "Batch Convert",
+                    title: "Batch",
                     mode: .batchConvert,
                     identifier: "mode-batch"
                 )
                 modeButton(
-                    title: "Merge into One",
+                    title: "Merge",
                     mode: .mergeIntoOne,
                     identifier: "mode-merge"
                 )
@@ -160,13 +342,13 @@ struct MainView: View {
             HStack(alignment: .top, spacing: 12) {
                 WorkspaceSectionHeader(
                     eyebrow: "Destination",
-                    title: "Choose the merged export path",
-                    message: "Choose the export location before starting the merge."
+                    title: "Merged export path",
+                    message: "Required before the ordered merge starts."
                 )
 
                 Spacer(minLength: 0)
 
-                Button("Choose Destination", action: handleSelectMergeDestination)
+                Button("Choose", action: handleSelectMergeDestination)
                     .buttonStyle(.borderedProminent)
                     .disabled(!appState.canChooseMergeDestination)
                     .accessibilityIdentifier("select-merge-destination")
@@ -181,7 +363,7 @@ struct MainView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .workspaceInsetSurface(tone: .muted)
             } else {
-                Text("No merge destination selected yet.")
+                Text("No destination selected.")
                     .font(WorkspaceType.detail)
                     .foregroundStyle(.secondary)
                     .workspaceInsetSurface(tone: .muted)
@@ -193,7 +375,7 @@ struct MainView: View {
     private func primaryActionSection(using action: WorkspacePresentation.Action) -> some View {
         let guidance = action.guidance
 
-        return VStack(alignment: .leading, spacing: isMergeMode ? 10 : 16) {
+        return VStack(alignment: .leading, spacing: isMergeMode ? 10 : 14) {
             WorkspaceSectionHeader(
                 eyebrow: action.eyebrow,
                 title: action.title,
@@ -373,8 +555,8 @@ private struct WorkspacePresentation {
 
         headerBadge = HeaderBadge(
             title: appState.isConverting
-                ? (isMergeMode ? "Merge in flight" : "Batch in flight")
-                : (isMergeMode ? "Merge studio" : "Batch studio"),
+                ? "Running"
+                : (isMergeMode ? "Merge" : "Batch"),
             tone: appState.isConverting ? .accent : .muted
         )
 
@@ -493,10 +675,10 @@ private struct WorkspacePresentation {
     ) -> Action {
         Action(
             eyebrow: isMergeMode ? "Merge export" : "Batch export",
-            title: isMergeMode ? "Run the ordered merge" : "Run the conversion batch",
+            title: isMergeMode ? "Run merge" : "Run batch",
             message: isMergeMode
-                ? "Start the merge once the staged files and destination are ready."
-                : "Readiness, validation, and live progress stay separated so blocked states do not crowd the main CTA row.",
+                ? "Starts once files and destination are ready."
+                : "Starts once files and format are ready.",
             primaryButtonTitle: primaryButtonTitle,
             primaryButtonIdentifier: primaryButtonIdentifier,
             canStartPrimaryAction: canStartPrimaryAction,
@@ -689,22 +871,22 @@ struct MainViewLayout: Equatable {
 }
 
 enum WorkspaceChrome {
-    static let pagePadding: CGFloat = 24
-    static let pageSpacing: CGFloat = 20
-    static let surfacePadding: CGFloat = 20
-    static let insetPadding: CGFloat = 14
-    static let surfaceRadius: CGFloat = 22
-    static let insetRadius: CGFloat = 16
+    static let pagePadding: CGFloat = 20
+    static let pageSpacing: CGFloat = 14
+    static let surfacePadding: CGFloat = 16
+    static let insetPadding: CGFloat = 12
+    static let surfaceRadius: CGFloat = 8
+    static let insetRadius: CGFloat = 6
 }
 
 enum WorkspaceType {
-    static let display = Font.system(size: 32, weight: .semibold, design: .rounded)
-    static let sectionTitle = Font.system(size: 21, weight: .semibold, design: .rounded)
-    static let bodyStrong = Font.system(size: 15, weight: .semibold, design: .rounded)
-    static let body = Font.system(size: 14, weight: .regular, design: .rounded)
-    static let detail = Font.system(size: 12, weight: .medium, design: .monospaced)
-    static let caption = Font.system(size: 11, weight: .semibold, design: .rounded)
-    static let metric = Font.system(size: 11, weight: .semibold, design: .monospaced)
+    static let display = Font.system(size: 28, weight: .semibold)
+    static let sectionTitle = Font.system(size: 17, weight: .semibold)
+    static let bodyStrong = Font.system(size: 13, weight: .semibold)
+    static let body = Font.system(size: 13, weight: .regular)
+    static let detail = Font.system(size: 12, weight: .regular)
+    static let caption = Font.system(size: 11, weight: .semibold)
+    static let metric = Font.system(size: 11, weight: .medium, design: .monospaced)
 }
 
 enum WorkspaceSurfaceTone {
@@ -718,34 +900,34 @@ enum WorkspaceSurfaceTone {
     var fillColor: Color {
         switch self {
         case .standard:
-            return Color.primary.opacity(0.045)
+            return Color.primary.opacity(0.035)
         case .accent:
-            return Color.accentColor.opacity(0.10)
+            return Color.accentColor.opacity(0.08)
         case .muted:
-            return Color.primary.opacity(0.028)
+            return Color.primary.opacity(0.020)
         case .warning:
-            return Color.orange.opacity(0.10)
+            return Color.orange.opacity(0.08)
         case .critical:
-            return Color.red.opacity(0.11)
+            return Color.red.opacity(0.09)
         case .success:
-            return Color.green.opacity(0.10)
+            return Color.green.opacity(0.08)
         }
     }
 
     var strokeColor: Color {
         switch self {
         case .standard:
-            return Color.primary.opacity(0.08)
+            return Color.primary.opacity(0.07)
         case .accent:
-            return Color.accentColor.opacity(0.24)
+            return Color.accentColor.opacity(0.20)
         case .muted:
-            return Color.primary.opacity(0.05)
+            return Color.primary.opacity(0.04)
         case .warning:
-            return Color.orange.opacity(0.22)
+            return Color.orange.opacity(0.18)
         case .critical:
-            return Color.red.opacity(0.24)
+            return Color.red.opacity(0.20)
         case .success:
-            return Color.green.opacity(0.24)
+            return Color.green.opacity(0.20)
         }
     }
 }
@@ -756,9 +938,9 @@ struct WorkspaceSectionHeader: View {
     let message: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
             if let eyebrow {
-                Text(eyebrow)
+                Text(eyebrow.uppercased())
                     .font(WorkspaceType.caption)
                     .foregroundStyle(.secondary)
             }

@@ -1,5 +1,111 @@
 import Foundation
 
+struct QueueSchedulerSettings: Equatable {
+    static let minimumConcurrentJobLimit = 1
+    static let maximumConcurrentJobLimit = 6
+
+    var usesAutomaticConcurrency: Bool
+    private(set) var manualConcurrentJobLimit: Int
+
+    init(
+        usesAutomaticConcurrency: Bool = true,
+        manualConcurrentJobLimit: Int = 2
+    ) {
+        self.usesAutomaticConcurrency = usesAutomaticConcurrency
+        self.manualConcurrentJobLimit = Self.clampedConcurrentJobLimit(manualConcurrentJobLimit)
+    }
+
+    var effectiveConcurrentJobLimit: Int {
+        usesAutomaticConcurrency
+            ? Self.automaticLimit()
+            : manualConcurrentJobLimit
+    }
+
+    mutating func updateManualConcurrentJobLimit(_ value: Int) {
+        manualConcurrentJobLimit = Self.clampedConcurrentJobLimit(value)
+    }
+
+    static func automaticLimit(
+        processorCount: Int = ProcessInfo.processInfo.activeProcessorCount
+    ) -> Int {
+        clampedConcurrentJobLimit(max(processorCount - 1, minimumConcurrentJobLimit))
+    }
+
+    static func clampedConcurrentJobLimit(_ value: Int) -> Int {
+        min(max(value, minimumConcurrentJobLimit), maximumConcurrentJobLimit)
+    }
+}
+
+struct QueueDashboardSnapshot: Equatable {
+    let queuedCount: Int
+    let runningCount: Int
+    let completedCount: Int
+    let skippedCount: Int
+    let failedCount: Int
+    let cancelledCount: Int
+    let stagedFileCount: Int
+    let effectiveConcurrentJobLimit: Int
+    let usesAutomaticConcurrency: Bool
+    let operationTitle: String
+
+    init(
+        snapshots: [BatchStatusSnapshot],
+        stagedFileCount: Int,
+        operationMode: AppState.OperationMode,
+        schedulerSettings: QueueSchedulerSettings
+    ) {
+        let isMergeMode = operationMode == .mergeIntoOne
+        let counts = QueueDashboardCounts(snapshots: snapshots)
+        self.queuedCount = counts.queued
+        self.runningCount = counts.running
+        self.completedCount = counts.completed
+        self.skippedCount = counts.skipped
+        self.failedCount = counts.failed
+        self.cancelledCount = counts.cancelled
+        self.stagedFileCount = stagedFileCount
+        self.effectiveConcurrentJobLimit = isMergeMode ? 1 : schedulerSettings.effectiveConcurrentJobLimit
+        self.usesAutomaticConcurrency = isMergeMode ? false : schedulerSettings.usesAutomaticConcurrency
+        self.operationTitle = isMergeMode ? "Merge queue" : "Conversion queue"
+    }
+
+    var totalTrackedCount: Int {
+        let snapshotCount = queuedCount + runningCount + completedCount + skippedCount + failedCount + cancelledCount
+        return max(snapshotCount, stagedFileCount)
+    }
+
+    var terminalCount: Int {
+        completedCount + skippedCount + failedCount + cancelledCount
+    }
+}
+
+private struct QueueDashboardCounts {
+    var queued = 0
+    var running = 0
+    var completed = 0
+    var skipped = 0
+    var failed = 0
+    var cancelled = 0
+
+    init(snapshots: [BatchStatusSnapshot]) {
+        for snapshot in snapshots {
+            switch snapshot.state {
+            case .queued:
+                queued += 1
+            case .running:
+                running += 1
+            case .succeeded:
+                completed += 1
+            case .skipped:
+                skipped += 1
+            case .failed:
+                failed += 1
+            case .cancelled:
+                cancelled += 1
+            }
+        }
+    }
+}
+
 enum AppStateWorkflowRules {
     static func canOpenFiles(startupState: StartupState, isConverting: Bool) -> Bool {
         startupState == .ready && !isConverting

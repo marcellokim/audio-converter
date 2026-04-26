@@ -9,6 +9,10 @@ extension ConversionCoordinatorSession: BatchConversionSessioning {}
 final class AppState: ObservableObject {
     private static let preferredFormatDefaultsKey = "AudioConverter.preferredFormat"
     private static let preferredOperationModeDefaultsKey = "AudioConverter.preferredOperationMode"
+    private static let selectedFilesDefaultsKey = "AudioConverter.selectedFiles"
+    private static let mergeDestinationURLDefaultsKey = "AudioConverter.mergeDestinationURL"
+    private static let schedulerUsesAutomaticConcurrencyDefaultsKey = "AudioConverter.scheduler.usesAutomaticConcurrency"
+    private static let schedulerManualConcurrentJobLimitDefaultsKey = "AudioConverter.scheduler.manualConcurrentJobLimit"
 
     enum FFmpegResolution {
         case ready(URL)
@@ -30,6 +34,7 @@ final class AppState: ObservableObject {
         [SelectedAudioFile],
         SupportedFormat,
         URL,
+        Int,
         @escaping ([BatchStatusSnapshot]) -> Void,
         @escaping ([BatchStatusSnapshot]) -> Void
     ) -> any BatchConversionSessioning
@@ -44,6 +49,7 @@ final class AppState: ObservableObject {
 
     @Published var selectedFiles: [URL] = [] {
         didSet {
+            persistSelectedFiles()
             refreshStatusMessageForCurrentInputs()
         }
     }
@@ -73,7 +79,16 @@ final class AppState: ObservableObject {
     @Published private(set) var batchSnapshots: [BatchStatusSnapshot] = []
     @Published private(set) var isConverting = false
     @Published private(set) var isCancelling = false
-    @Published private(set) var mergeDestinationURL: URL?
+    @Published private(set) var mergeDestinationURL: URL? {
+        didSet {
+            persistMergeDestinationURL()
+        }
+    }
+    @Published private(set) var schedulerSettings = QueueSchedulerSettings() {
+        didSet {
+            persistSchedulerSettings()
+        }
+    }
 
     private let resolveFFmpegURL: FFmpegResolver
     private let validateStartupCapabilities: CapabilityValidator
@@ -98,8 +113,8 @@ final class AppState: ObservableObject {
             )
         },
         preferencesStore: UserDefaults = AppState.makeTransientPreferencesStore(),
-        makeConversionSession: @escaping ConversionSessionFactory = { files, format, ffmpegURL, onUpdate, onCompletion in
-            ConversionCoordinator().makeSession(
+        makeConversionSession: @escaping ConversionSessionFactory = { files, format, ffmpegURL, maximumConcurrentJobs, onUpdate, onCompletion in
+            ConversionCoordinator(maximumConcurrentJobs: maximumConcurrentJobs).makeSession(
                 files: files,
                 format: format,
                 ffmpegURL: ffmpegURL,
@@ -127,10 +142,32 @@ final class AppState: ObservableObject {
         self.makeMergeSession = makeMergeSession
         self.outputFormat = Self.restorePreferredFormat(from: preferencesStore)
         self.operationMode = Self.restorePreferredOperationMode(from: preferencesStore)
+        self.selectedFiles = Self.restoreSelectedFiles(from: preferencesStore)
+        self.mergeDestinationURL = Self.restoreMergeDestinationURL(from: preferencesStore)
+        self.schedulerSettings = Self.restoreSchedulerSettings(from: preferencesStore)
     }
 
     var selectedAudioFiles: [SelectedAudioFile] {
         selectedFiles.map(SelectedAudioFile.init)
+    }
+
+    var queueDashboardSnapshot: QueueDashboardSnapshot {
+        QueueDashboardSnapshot(
+            snapshots: batchSnapshots,
+            stagedFileCount: selectedFiles.count,
+            operationMode: operationMode,
+            schedulerSettings: schedulerSettings
+        )
+    }
+
+    var effectiveConcurrentJobLimit: Int {
+        operationMode == .mergeIntoOne
+            ? 1
+            : schedulerSettings.effectiveConcurrentJobLimit
+    }
+
+    var manualConcurrentJobLimit: Int {
+        schedulerSettings.manualConcurrentJobLimit
     }
 
     var formatValidationState: ValidationState {
@@ -368,6 +405,24 @@ final class AppState: ObservableObject {
         }
     }
 
+    func setAutomaticSchedulingEnabled(_ isEnabled: Bool) {
+        guard !isConverting else {
+            return
+        }
+
+        schedulerSettings.usesAutomaticConcurrency = isEnabled
+        refreshStatusMessageForCurrentInputs()
+    }
+
+    func updateManualConcurrentJobLimit(_ value: Int) {
+        guard !isConverting else {
+            return
+        }
+
+        schedulerSettings.updateManualConcurrentJobLimit(value)
+        refreshStatusMessageForCurrentInputs()
+    }
+
     func startConversion() {
         guard !isConverting else {
             return
@@ -405,6 +460,7 @@ final class AppState: ObservableObject {
             files,
             format,
             ffmpegURL,
+            effectiveConcurrentJobLimit,
             { [weak self] snapshots in
                 self?.performOnMain {
                     guard let self else {
@@ -595,6 +651,56 @@ final class AppState: ObservableObject {
         }
 
         return mode
+    }
+
+    private static func restoreSelectedFiles(from preferencesStore: UserDefaults) -> [URL] {
+        preferencesStore.stringArray(forKey: selectedFilesDefaultsKey)?
+            .map { URL(fileURLWithPath: $0) } ?? []
+    }
+
+    private static func restoreMergeDestinationURL(from preferencesStore: UserDefaults) -> URL? {
+        guard let path = preferencesStore.string(forKey: mergeDestinationURLDefaultsKey),
+              !path.isEmpty else {
+            return nil
+        }
+
+        return URL(fileURLWithPath: path)
+    }
+
+    private static func restoreSchedulerSettings(from preferencesStore: UserDefaults) -> QueueSchedulerSettings {
+        let usesAutomaticConcurrency = preferencesStore.object(forKey: schedulerUsesAutomaticConcurrencyDefaultsKey) == nil
+            ? true
+            : preferencesStore.bool(forKey: schedulerUsesAutomaticConcurrencyDefaultsKey)
+        let manualLimit = preferencesStore.object(forKey: schedulerManualConcurrentJobLimitDefaultsKey) == nil
+            ? 2
+            : preferencesStore.integer(forKey: schedulerManualConcurrentJobLimitDefaultsKey)
+        return QueueSchedulerSettings(
+            usesAutomaticConcurrency: usesAutomaticConcurrency,
+            manualConcurrentJobLimit: manualLimit
+        )
+    }
+
+    private func persistSelectedFiles() {
+        preferencesStore.set(selectedFiles.map(\.path), forKey: Self.selectedFilesDefaultsKey)
+    }
+
+    private func persistMergeDestinationURL() {
+        if let mergeDestinationURL {
+            preferencesStore.set(mergeDestinationURL.path, forKey: Self.mergeDestinationURLDefaultsKey)
+        } else {
+            preferencesStore.removeObject(forKey: Self.mergeDestinationURLDefaultsKey)
+        }
+    }
+
+    private func persistSchedulerSettings() {
+        preferencesStore.set(
+            schedulerSettings.usesAutomaticConcurrency,
+            forKey: Self.schedulerUsesAutomaticConcurrencyDefaultsKey
+        )
+        preferencesStore.set(
+            schedulerSettings.manualConcurrentJobLimit,
+            forKey: Self.schedulerManualConcurrentJobLimitDefaultsKey
+        )
     }
 
     private func validatedFormatOrUpdateStatusMessage() -> SupportedFormat? {

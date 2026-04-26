@@ -17,15 +17,16 @@ struct FormatInputView: View {
         VStack(alignment: .leading, spacing: 16) {
             WorkspaceSectionHeader(
                 eyebrow: "Format",
-                title: "Choose the output format",
-                message: "Use the registry-backed extension field or tap a quick chip. Invalid-format feedback still stays in the export panel."
+                title: "Output format",
+                message: "Type an extension or choose a supported chip."
             )
 
-            HStack(spacing: 8) {
-                WorkspaceBadge(
-                    title: isEnabled ? "Editable" : "Locked",
-                    tone: isEnabled ? .accent : .muted
-                )
+            HStack(alignment: .center, spacing: 8) {
+                TextField("mp3", text: $outputFormat)
+                    .textFieldStyle(.roundedBorder)
+                    .font(WorkspaceType.detail)
+                    .disabled(!isEnabled)
+                    .accessibilityLabel("Output format")
 
                 if !selectedFormatKey.isEmpty {
                     WorkspaceBadge(
@@ -34,12 +35,6 @@ struct FormatInputView: View {
                     )
                 }
             }
-
-            TextField("mp3", text: $outputFormat)
-                .textFieldStyle(.roundedBorder)
-                .font(WorkspaceType.detail)
-                .disabled(!isEnabled)
-                .accessibilityLabel("Output format")
 
             LazyVGrid(
                 columns: [GridItem(.adaptive(minimum: 56), spacing: 8, alignment: .leading)],
@@ -78,6 +73,7 @@ struct FormatInputView: View {
             Text(fieldGuidance)
                 .font(WorkspaceType.detail)
                 .foregroundStyle(.secondary)
+                .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .workspaceSurface(tone: .standard)

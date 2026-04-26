@@ -112,8 +112,8 @@ struct AudioConverterApp: App {
             return AppState(
                 selectAudioFiles: selectAudioFiles,
                 selectMergeDestinationURL: selectMergeDestinationURL,
-                makeConversionSession: makeConversionSession ?? { files, format, ffmpegURL, onUpdate, onCompletion in
-                    ConversionCoordinator().makeSession(
+                makeConversionSession: makeConversionSession ?? { files, format, ffmpegURL, maximumConcurrentJobs, onUpdate, onCompletion in
+                    ConversionCoordinator(maximumConcurrentJobs: maximumConcurrentJobs).makeSession(
                         files: files,
                         format: format,
                         ffmpegURL: ffmpegURL,

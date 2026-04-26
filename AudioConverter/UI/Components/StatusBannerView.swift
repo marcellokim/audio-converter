@@ -13,22 +13,24 @@ struct StatusBannerView: View {
     let tone: Tone
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .center, spacing: 12) {
             Image(systemName: iconName)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(iconColor)
+                .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(WorkspaceType.sectionTitle)
+                    .font(WorkspaceType.bodyStrong)
                 Text(message)
-                    .font(WorkspaceType.body)
+                    .font(WorkspaceType.detail)
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
                     .textSelection(.enabled)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .workspaceSurface(tone: surfaceTone, padding: 18)
+        .workspaceSurface(tone: surfaceTone, padding: 12)
         .accessibilityElement(children: .combine)
     }
 

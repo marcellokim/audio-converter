@@ -7,10 +7,10 @@ struct BatchStatusListView: View {
         VStack(alignment: .leading, spacing: 16) {
             WorkspaceSectionHeader(
                 eyebrow: "Batch status",
-                title: "Review queued, live, and completed items",
+                title: "Activity",
                 message: snapshots.isEmpty
-                    ? "The status rail stays compact until conversion or merge work begins."
-                    : "Each row keeps the filename, state, detail, and progress labels visible for quick scanning."
+                    ? "Conversion and merge updates appear here."
+                    : "Live rows stay grouped by current state."
             )
 
             if snapshots.isEmpty {
@@ -24,23 +24,20 @@ struct BatchStatusListView: View {
     }
 
     private var emptyState: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .center, spacing: 12) {
             Image(systemName: "list.bullet.clipboard")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.secondary)
+                .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("No batch activity yet")
+                Text("Idle")
                     .font(WorkspaceType.bodyStrong)
-                Text("Queued, running, skipped, cancelled, and completed items will appear here once work starts.")
+                Text("Queued, running, skipped, cancelled, and completed files will appear once work starts.")
                     .font(WorkspaceType.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
-            Spacer(minLength: 0)
-
-            WorkspaceBadge(title: "Idle", tone: .muted)
         }
         .workspaceInsetSurface(tone: .muted)
     }
@@ -59,7 +56,7 @@ struct BatchStatusListView: View {
 
     private var summaryPills: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Current totals")
+            Text("Totals")
                 .font(WorkspaceType.caption)
                 .foregroundStyle(.secondary)
 

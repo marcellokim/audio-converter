@@ -13,14 +13,14 @@ final class AudioConverterTests: XCTestCase {
     func testMainViewLayoutUsesTwoZoneWorkspaceAtDefaultWindowWidth() {
         let layout = MainViewLayout(windowWidth: 960)
 
-        XCTAssertEqual(layout.availableWidth, 912)
+        XCTAssertEqual(layout.availableWidth, 920)
         XCTAssertTrue(layout.prefersTwoColumn)
     }
 
     func testMainViewLayoutCollapsesAtMinimumWindowWidth() {
         let layout = MainViewLayout(windowWidth: 720)
 
-        XCTAssertEqual(layout.availableWidth, 672)
+        XCTAssertEqual(layout.availableWidth, 680)
         XCTAssertFalse(layout.prefersTwoColumn)
     }
 
@@ -260,6 +260,70 @@ final class AudioConverterTests: XCTestCase {
         )
     }
 
+    func testQueueStateRestoresPausedStagedFilesAndSchedulerSettings() {
+        let preferencesStore = makePreferencesStore()
+        let firstFile = URL(fileURLWithPath: "/tmp/intro.wav")
+        let secondFile = URL(fileURLWithPath: "/tmp/outro.aiff")
+        let destinationURL = URL(fileURLWithPath: "/tmp/merged-output.mp3")
+        let state = makeReadyAppState(
+            selectMergeDestinationURL: { _, _ in destinationURL },
+            preferencesStore: preferencesStore
+        )
+        state.operationMode = .mergeIntoOne
+        state.selectedFiles = [firstFile, secondFile]
+        state.outputFormat = "mp3"
+        state.selectMergeDestination()
+        state.operationMode = .batchConvert
+        state.setAutomaticSchedulingEnabled(false)
+        state.updateManualConcurrentJobLimit(4)
+
+        let restoredState = AppState(preferencesStore: preferencesStore)
+
+        XCTAssertEqual(restoredState.selectedFiles, [firstFile, secondFile])
+        XCTAssertEqual(restoredState.mergeDestinationURL, destinationURL)
+        XCTAssertEqual(restoredState.operationMode, .batchConvert)
+        XCTAssertFalse(restoredState.schedulerSettings.usesAutomaticConcurrency)
+        XCTAssertEqual(restoredState.manualConcurrentJobLimit, 4)
+        XCTAssertFalse(restoredState.isConverting)
+        XCTAssertTrue(restoredState.batchSnapshots.isEmpty)
+    }
+
+    func testQueueSchedulerSettingsClampManualConcurrencyAndDefaultToAutomaticLimit() {
+        XCTAssertEqual(QueueSchedulerSettings.automaticLimit(processorCount: 1), 1)
+        XCTAssertEqual(QueueSchedulerSettings.automaticLimit(processorCount: 4), 3)
+        XCTAssertEqual(QueueSchedulerSettings.automaticLimit(processorCount: 12), 6)
+
+        var settings = QueueSchedulerSettings(usesAutomaticConcurrency: false, manualConcurrentJobLimit: 99)
+        XCTAssertEqual(settings.effectiveConcurrentJobLimit, QueueSchedulerSettings.maximumConcurrentJobLimit)
+
+        settings.updateManualConcurrentJobLimit(0)
+        XCTAssertEqual(settings.effectiveConcurrentJobLimit, QueueSchedulerSettings.minimumConcurrentJobLimit)
+    }
+
+    func testStartConversionPassesEffectiveSchedulerLimitIntoSessionFactory() {
+        let session = ControlledConversionSession()
+        var capturedMaximumConcurrentJobs: Int?
+        let state = makeReadyAppState(
+            session: session,
+            makeConversionSession: { _, _, _, maximumConcurrentJobs, onUpdate, onCompletion in
+                capturedMaximumConcurrentJobs = maximumConcurrentJobs
+                session.onUpdate = onUpdate
+                session.onCompletion = onCompletion
+                return session
+            }
+        )
+
+        state.selectedFiles = [URL(fileURLWithPath: "/tmp/example.wav")]
+        state.outputFormat = "mp3"
+        state.setAutomaticSchedulingEnabled(false)
+        state.updateManualConcurrentJobLimit(3)
+
+        state.startConversion()
+
+        XCTAssertEqual(capturedMaximumConcurrentJobs, 3)
+        XCTAssertEqual(session.startCallCount, 1)
+    }
+
     func testMergeModeRequiresDestinationAndAtLeastTwoFiles() {
         let state = makeReadyAppState(
             selectMergeDestinationURL: { _, _ in
@@ -406,7 +470,8 @@ final class AudioConverterTests: XCTestCase {
         mergeSession: ControlledMergeSession? = nil,
         selectAudioFiles: @escaping AppState.FileSelector = { [] },
         selectMergeDestinationURL: @escaping AppState.MergeDestinationSelector = { _, _ in nil },
-        preferencesStore: UserDefaults? = nil
+        preferencesStore: UserDefaults? = nil,
+        makeConversionSession: AppState.ConversionSessionFactory? = nil
     ) -> AppState {
         let controlledSession = session ?? ControlledConversionSession()
         let controlledMergeSession = mergeSession ?? ControlledMergeSession()
@@ -416,7 +481,7 @@ final class AudioConverterTests: XCTestCase {
             selectAudioFiles: selectAudioFiles,
             selectMergeDestinationURL: selectMergeDestinationURL,
             preferencesStore: preferencesStore ?? makePreferencesStore(),
-            makeConversionSession: { _, _, _, onUpdate, onCompletion in
+            makeConversionSession: makeConversionSession ?? { _, _, _, _, onUpdate, onCompletion in
                 controlledSession.onUpdate = onUpdate
                 controlledSession.onCompletion = onCompletion
                 return controlledSession

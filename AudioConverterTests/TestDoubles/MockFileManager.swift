@@ -2,6 +2,8 @@ import Foundation
 @testable import AudioConverter
 
 final class MockFileManager: FileManaging {
+    private let lock = NSLock()
+
     var existingURLs: Set<URL> = []
     var temporaryOutputURLs: [URL: URL] = [:]
     var moveError: Error?
@@ -11,10 +13,16 @@ final class MockFileManager: FileManaging {
     private(set) var removedURLs: [URL] = []
 
     func fileExists(at url: URL) -> Bool {
-        existingURLs.contains(url)
+        lock.lock()
+        defer { lock.unlock() }
+
+        return existingURLs.contains(url)
     }
 
     func makeTemporaryOutputURL(for destinationURL: URL) -> URL {
+        lock.lock()
+        defer { lock.unlock() }
+
         if let temporaryOutputURL = temporaryOutputURLs[destinationURL] {
             return temporaryOutputURL
         }
@@ -25,6 +33,9 @@ final class MockFileManager: FileManaging {
     }
 
     func moveItemAtomically(at sourceURL: URL, to destinationURL: URL) throws {
+        lock.lock()
+        defer { lock.unlock() }
+
         movedPairs.append((sourceURL, destinationURL))
         if let moveError {
             throw moveError
@@ -35,6 +46,9 @@ final class MockFileManager: FileManaging {
     }
 
     func replaceItemAtomically(at sourceURL: URL, to destinationURL: URL) throws {
+        lock.lock()
+        defer { lock.unlock() }
+
         if let replaceError {
             throw replaceError
         }
@@ -50,6 +64,9 @@ final class MockFileManager: FileManaging {
     }
 
     func removeItemIfPresent(at url: URL) {
+        lock.lock()
+        defer { lock.unlock() }
+
         removedURLs.append(url)
     }
 }
