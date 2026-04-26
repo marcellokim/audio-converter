@@ -14,11 +14,11 @@ struct FormatInputView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 10) {
             WorkspaceSectionHeader(
                 eyebrow: "Format",
                 title: "Output format",
-                message: "Type an extension or choose a supported chip."
+                message: "Type an extension or choose a chip."
             )
 
             HStack(alignment: .center, spacing: 8) {
@@ -39,7 +39,7 @@ struct FormatInputView: View {
             LazyVGrid(
                 columns: [GridItem(.adaptive(minimum: 56), spacing: 8, alignment: .leading)],
                 alignment: .leading,
-                spacing: 8
+                spacing: 6
             ) {
                 ForEach(formats) { format in
                     Button {
@@ -55,8 +55,8 @@ struct FormatInputView: View {
                                 .font(WorkspaceType.metric)
                         }
                         .foregroundStyle(isSelected(format) ? Color.accentColor : .primary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
                         .frame(maxWidth: .infinity)
                         .background(chipBackground(for: format), in: Capsule())
                         .overlay(
@@ -73,8 +73,7 @@ struct FormatInputView: View {
             Text(fieldGuidance)
                 .font(WorkspaceType.detail)
                 .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(1)
         }
         .workspaceSurface(tone: .standard)
     }

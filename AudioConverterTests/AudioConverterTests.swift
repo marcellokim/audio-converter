@@ -13,14 +13,14 @@ final class AudioConverterTests: XCTestCase {
     func testMainViewLayoutUsesTwoZoneWorkspaceAtDefaultWindowWidth() {
         let layout = MainViewLayout(windowWidth: 960)
 
-        XCTAssertEqual(layout.availableWidth, 920)
+        XCTAssertEqual(layout.availableWidth, 924)
         XCTAssertTrue(layout.prefersTwoColumn)
     }
 
     func testMainViewLayoutCollapsesAtMinimumWindowWidth() {
         let layout = MainViewLayout(windowWidth: 720)
 
-        XCTAssertEqual(layout.availableWidth, 680)
+        XCTAssertEqual(layout.availableWidth, 684)
         XCTAssertFalse(layout.prefersTwoColumn)
     }
 

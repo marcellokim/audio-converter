@@ -8,60 +8,46 @@ struct MainView: View {
             let layout = MainViewLayout(windowWidth: proxy.size.width)
             let presentation = WorkspacePresentation(appState: appState)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
-                    header(using: presentation)
+            VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
+                topBar(using: presentation)
 
-                    StatusBannerView(
-                        title: presentation.banner.title,
-                        message: presentation.banner.message,
-                        tone: presentation.banner.tone
-                    )
-
-                    workspace(for: layout, presentation: presentation)
-                }
-                .padding(WorkspaceChrome.pagePadding)
-                .frame(width: max(layout.availableWidth, 0), alignment: .leading)
+                workspace(for: layout, presentation: presentation)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
+            .padding(WorkspaceChrome.pagePadding)
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
         }
     }
 
-    @ViewBuilder
     private func workspace(
         for layout: MainViewLayout,
         presentation: WorkspacePresentation
     ) -> some View {
-        if layout.prefersTwoColumn {
-            let secondaryWidth = min(max(layout.availableWidth * 0.34, 280), 320)
-            HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
-                primaryLane
-                    .frame(
-                        width: max(layout.availableWidth - secondaryWidth - WorkspaceChrome.pageSpacing, 280),
-                        alignment: .leading
-                    )
-                    .layoutPriority(1)
+        let secondaryWidth = layout.secondaryColumnWidth
 
-                secondaryLane(using: presentation)
-                    .frame(width: secondaryWidth, alignment: .leading)
-            }
-            .frame(width: max(layout.availableWidth, 0), alignment: .leading)
-        } else {
-            VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
-                fileSelectionSection
-                queueManagerSection
-                secondaryLane(using: presentation)
-                batchStatusSection
-            }
-            .frame(width: max(layout.availableWidth, 0), alignment: .leading)
+        return HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
+            primaryLane
+                .frame(
+                    width: max(layout.availableWidth - secondaryWidth - WorkspaceChrome.pageSpacing, 300),
+                    alignment: .topLeading
+                )
+                .layoutPriority(1)
+
+            secondaryLane(using: presentation)
+                .frame(width: secondaryWidth, alignment: .topLeading)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var primaryLane: some View {
         VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
             fileSelectionSection
+                .frame(maxHeight: .infinity, alignment: .top)
             queueManagerSection
             batchStatusSection
+                .frame(maxHeight: .infinity, alignment: .top)
         }
+        .frame(maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var fileSelectionSection: some View {
@@ -290,27 +276,34 @@ struct MainView: View {
         }
     }
 
-    private func header(using presentation: WorkspacePresentation) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("AudioConverter")
-                    .font(WorkspaceType.display)
+    private func topBar(using presentation: WorkspacePresentation) -> some View {
+        HStack(alignment: .center, spacing: WorkspaceChrome.pageSpacing) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("AudioConverter")
+                        .font(WorkspaceType.display)
 
-                Text("Convert batches or merge ordered source files with live queue control.")
-                    .font(WorkspaceType.body)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text("Batch conversion and ordered merge in one workspace.")
+                        .font(WorkspaceType.body)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                WorkspaceBadge(
+                    title: presentation.headerBadge.title,
+                    tone: presentation.headerBadge.tone
+                )
             }
+            .frame(minWidth: 280, alignment: .leading)
 
-            Spacer(minLength: 0)
-
-            WorkspaceBadge(
-                title: presentation.headerBadge.title,
-                tone: presentation.headerBadge.tone
+            StatusBannerView(
+                title: presentation.banner.title,
+                message: presentation.banner.message,
+                tone: presentation.banner.tone
             )
+            .layoutPriority(1)
         }
-        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var operationModeSection: some View {
@@ -868,11 +861,15 @@ struct MainViewLayout: Equatable {
     var prefersTwoColumn: Bool {
         availableWidth >= Self.wideBreakpoint
     }
+
+    var secondaryColumnWidth: CGFloat {
+        min(max(availableWidth * 0.34, 276), 336)
+    }
 }
 
 enum WorkspaceChrome {
-    static let pagePadding: CGFloat = 20
-    static let pageSpacing: CGFloat = 14
+    static let pagePadding: CGFloat = 18
+    static let pageSpacing: CGFloat = 12
     static let surfacePadding: CGFloat = 16
     static let insetPadding: CGFloat = 12
     static let surfaceRadius: CGFloat = 8

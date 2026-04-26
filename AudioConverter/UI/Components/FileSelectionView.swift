@@ -12,13 +12,16 @@ struct FileSelectionView: View {
     let canReorderFiles: Bool
     let isMergeMode: Bool
 
+    private let maxVisibleFiles = 4
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             header
 
             Text(selectionStatusMessage)
                 .font(WorkspaceType.detail)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
 
             if files.isEmpty {
                 emptyState
@@ -26,32 +29,36 @@ struct FileSelectionView: View {
                 stagedFileList
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .workspaceSurface(tone: .standard)
     }
 
     private var header: some View {
-        HStack(alignment: .top) {
+        HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(sectionTitle)
                     .font(WorkspaceType.sectionTitle)
                 Text(sectionMessage)
                     .font(WorkspaceType.body)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 8) {
-                Button("Select Files", action: action)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!canBrowseFiles)
-                    .accessibilityIdentifier("select-files")
-
+            HStack(spacing: 8) {
                 if !files.isEmpty && canRemoveFiles {
-                    Button("Clear All", action: onClearAll)
+                    Button("Clear", action: onClearAll)
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                         .accessibilityIdentifier("clear-files")
                 }
+
+                Button("Select Files", action: action)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .disabled(!canBrowseFiles)
+                    .accessibilityIdentifier("select-files")
             }
         }
     }
@@ -64,22 +71,23 @@ struct FileSelectionView: View {
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(canBrowseFiles ? "No source files staged" : "Waiting for startup check")
+                Text(canBrowseFiles ? "Quick Start" : "Waiting for startup check")
                     .font(WorkspaceType.bodyStrong)
                 Text(emptyStateMessage)
                     .font(WorkspaceType.detail)
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 72 - WorkspaceChrome.insetPadding * 2, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 64 - WorkspaceChrome.insetPadding * 2, alignment: .leading)
         .workspaceInsetSurface(tone: canBrowseFiles ? .muted : .warning)
         .accessibilityIdentifier("quick-start-card")
     }
 
     private var stagedFileList: some View {
-        VStack(spacing: 10) {
-            ForEach(Array(files.enumerated()), id: \.element.id) { index, file in
+        VStack(spacing: 8) {
+            ForEach(Array(visibleFiles.enumerated()), id: \.element.id) { index, file in
                 HStack(spacing: 12) {
                     Image(systemName: isMergeMode ? "arrow.up.arrow.down.circle" : "waveform")
                         .foregroundStyle(Color.accentColor)
@@ -120,7 +128,7 @@ struct FileSelectionView: View {
                                     .labelStyle(.iconOnly)
                             }
                             .buttonStyle(.borderless)
-                            .disabled(!canReorderFiles || index == files.count - 1)
+                            .disabled(!canReorderFiles || isLastFile(file))
                             .accessibilityIdentifier("move-staged-file-down-\(file.displayName)")
                         }
 
@@ -137,9 +145,30 @@ struct FileSelectionView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .workspaceInsetSurface(tone: .muted, padding: 14)
+                .workspaceInsetSurface(tone: .muted, padding: 10)
+            }
+
+            if hiddenFileCount > 0 {
+                Text("+ \(hiddenFileCount) more staged file(s)")
+                    .font(WorkspaceType.metric)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
             }
         }
+    }
+
+    private var visibleFiles: ArraySlice<SelectedAudioFile> {
+        files.prefix(maxVisibleFiles)
+    }
+
+    private var hiddenFileCount: Int {
+        max(files.count - maxVisibleFiles, 0)
+    }
+
+    private func isLastFile(_ file: SelectedAudioFile) -> Bool {
+        files.last?.id == file.id
     }
 
     private var sectionTitle: String {
