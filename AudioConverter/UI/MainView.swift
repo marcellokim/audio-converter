@@ -10,16 +10,16 @@ struct MainView: View {
             let contentHeight = max(
                 proxy.size.height
                     - (WorkspaceChrome.pagePadding * 2)
-                    - WorkspaceChrome.topBarHeight
+                    - WorkspaceChrome.commandBarHeight
                     - WorkspaceChrome.pageSpacing,
                 0
             )
 
             VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
-                topBar(using: presentation)
-                    .frame(height: WorkspaceChrome.topBarHeight)
+                commandBar(using: presentation)
+                    .frame(height: WorkspaceChrome.commandBarHeight)
 
-                workspace(
+                studioWorkspace(
                     for: layout,
                     contentHeight: contentHeight,
                     presentation: presentation
@@ -28,137 +28,109 @@ struct MainView: View {
             }
             .padding(WorkspaceChrome.pagePadding)
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            .background(WorkspaceChrome.windowBackground)
         }
     }
 
-    @ViewBuilder
-    private func workspace(
+    private func studioWorkspace(
         for layout: MainViewLayout,
         contentHeight: CGFloat,
         presentation: WorkspacePresentation
     ) -> some View {
-        if layout.prefersBalancedGrid {
-            balancedWorkspace(
-                for: layout,
-                contentHeight: contentHeight,
-                presentation: presentation
-            )
-        } else {
-            compactWorkspace(
-                for: layout,
-                contentHeight: contentHeight,
-                presentation: presentation
-            )
-        }
-    }
-
-    private func balancedWorkspace(
-        for layout: MainViewLayout,
-        contentHeight: CGFloat,
-        presentation: WorkspacePresentation
-    ) -> some View {
-        let columnWidths = layout.balancedColumnWidths
-        let monitorHeight = layout.monitorRowHeight(for: contentHeight)
-        let setupHeight = max(contentHeight - monitorHeight - WorkspaceChrome.pageSpacing, 0)
+        let deckWidths = layout.deckColumnWidths
+        let stripWidths = layout.operationsStripColumnWidths
+        let stripHeight = layout.operationsStripHeight(for: contentHeight)
+        let deckHeight = max(contentHeight - stripHeight - WorkspaceChrome.pageSpacing, 0)
 
         return VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
             HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
-                fileSelectionSection
-                    .frame(width: columnWidths.source, height: setupHeight, alignment: .topLeading)
+                sourceDeck
+                    .frame(width: deckWidths.source, height: deckHeight, alignment: .topLeading)
 
-                setupControlsColumn
-                    .frame(width: columnWidths.controls, height: setupHeight, alignment: .topLeading)
+                controlTower
+                    .frame(width: deckWidths.controls, height: deckHeight, alignment: .topLeading)
 
-                exportColumn(using: presentation.action)
-                    .frame(width: columnWidths.export, height: setupHeight, alignment: .topLeading)
+                launchConsole(using: presentation.action)
+                    .frame(width: deckWidths.launch, height: deckHeight, alignment: .topLeading)
             }
-            .frame(height: setupHeight, alignment: .topLeading)
+            .frame(height: deckHeight, alignment: .topLeading)
 
             HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
-                queueManagerSection
-                    .frame(width: columnWidths.source, height: monitorHeight, alignment: .topLeading)
+                queueTelemetrySection
+                    .frame(width: stripWidths.queue, height: stripHeight, alignment: .topLeading)
+
+                concurrencySection
+                    .frame(width: stripWidths.concurrency, height: stripHeight, alignment: .topLeading)
 
                 batchStatusSection
-                    .frame(width: columnWidths.controls + columnWidths.export + WorkspaceChrome.pageSpacing, height: monitorHeight, alignment: .topLeading)
+                    .frame(width: stripWidths.activity, height: stripHeight, alignment: .topLeading)
             }
-            .frame(height: monitorHeight, alignment: .topLeading)
+            .frame(height: stripHeight, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    private func compactWorkspace(
-        for layout: MainViewLayout,
-        contentHeight: CGFloat,
-        presentation: WorkspacePresentation
-    ) -> some View {
-        let secondaryWidth = layout.secondaryColumnWidth
-
-        return HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
-            primaryLane(contentHeight: contentHeight)
-                .frame(
-                    width: max(layout.availableWidth - secondaryWidth - WorkspaceChrome.pageSpacing, 300),
-                    alignment: .topLeading
-                )
-                .layoutPriority(1)
-
-            secondaryLane(using: presentation)
-                .frame(width: secondaryWidth, alignment: .topLeading)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    private var sourceDeck: some View {
+        fileSelectionSection
+            .accessibilityIdentifier("source-deck")
     }
 
-    private var setupControlsColumn: some View {
+    private var controlTower: some View {
         VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("CONTROL TOWER")
+                        .font(WorkspaceType.caption)
+                        .foregroundStyle(.secondary)
+                    Text("Output setup")
+                        .font(WorkspaceType.sectionTitle)
+                }
+
+                Spacer(minLength: 0)
+
+                WorkspaceBadge(title: isMergeMode ? "Merge" : "Batch", tone: isMergeMode ? .accent : .muted)
+            }
+
             operationModeSection
-                .frame(maxWidth: .infinity, alignment: .topLeading)
 
             FormatInputView(
                 outputFormat: $appState.outputFormat,
                 formats: FormatRegistry.allFormats,
                 isEnabled: !appState.isConverting
             )
-            .frame(maxWidth: .infinity, alignment: .topLeading)
 
-            if isMergeMode {
-                mergeDestinationSection
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-            }
+            outputPolicySection
 
             Spacer(minLength: 0)
         }
         .frame(maxHeight: .infinity, alignment: .topLeading)
+        .workspaceSurface(tone: .standard, padding: 12)
     }
 
-    private func exportColumn(using action: WorkspacePresentation.Action) -> some View {
+    private func launchConsole(using action: WorkspacePresentation.Action) -> some View {
         VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
-            primaryActionSection(using: action)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("LAUNCH CONSOLE")
+                    .font(WorkspaceType.caption)
+                    .foregroundStyle(.secondary)
+                Text(action.title)
+                    .font(WorkspaceType.sectionTitle)
+                Text(action.message)
+                    .font(WorkspaceType.detail)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
 
             exportReadinessCard(using: action)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            primaryActionSection(using: action)
+
+            launchProgressSection
 
             Spacer(minLength: 0)
         }
         .frame(maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private func primaryLane(contentHeight: CGFloat) -> some View {
-        let statusHeight = min(max(contentHeight * 0.38, 220), 278)
-
-        return VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
-            fileSelectionSection
-                .frame(maxHeight: .infinity, alignment: .top)
-
-            HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
-                queueManagerSection
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
-                batchStatusSection
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            }
-            .frame(height: statusHeight, alignment: .top)
-        }
-        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .workspaceSurface(tone: action.canStartPrimaryAction ? .accent : .standard, padding: 12)
     }
 
     private var fileSelectionSection: some View {
@@ -180,31 +152,99 @@ struct MainView: View {
         BatchStatusListView(snapshots: appState.batchSnapshots)
     }
 
-    private var queueManagerSection: some View {
-        let snapshot = appState.queueDashboardSnapshot
-
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Label(isMergeMode ? "Merge queue" : "Batch queue", systemImage: isMergeMode ? "arrow.triangle.merge" : "square.stack.3d.up")
+    private var outputPolicySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 8) {
+                Label(isMergeMode ? "Destination" : "Output", systemImage: isMergeMode ? "folder" : "tray.and.arrow.down")
                     .font(WorkspaceType.bodyStrong)
 
                 Spacer(minLength: 0)
 
-                Text(queueManagerMessage(for: snapshot))
-                    .font(WorkspaceType.metric)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                if isMergeMode {
+                    Button("Choose", action: handleSelectMergeDestination)
+                        .buttonStyle(WorkspaceCommandButtonStyle(tone: .accent, isProminent: true))
+                        .disabled(!appState.canChooseMergeDestination)
+                        .accessibilityIdentifier("select-merge-destination")
+                } else {
+                    WorkspaceBadge(title: "Beside source", tone: .muted)
+                }
             }
 
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) {
-                    queueStatusPills(for: snapshot)
+            if isMergeMode {
+                if let mergeDestinationURL = appState.mergeDestinationURL {
+                    Label(mergeDestinationURL.lastPathComponent, systemImage: "checkmark.circle.fill")
+                        .font(WorkspaceType.detail)
+                        .foregroundStyle(.green)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .workspaceInsetSurface(tone: .success, padding: 9)
+                        .accessibilityIdentifier("merge-destination-name")
+                } else {
+                    Text("No destination selected.")
+                        .font(WorkspaceType.detail)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .workspaceInsetSurface(tone: .muted, padding: 9)
                 }
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("Originals stay intact", systemImage: "checkmark.circle.fill")
+                    Label("Outputs render beside sources", systemImage: "checkmark.circle.fill")
+                }
+                .font(WorkspaceType.detail)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .workspaceInsetSurface(tone: .muted, padding: 8)
+            }
+        }
+        .workspaceSurface(tone: .standard, padding: 12)
+    }
 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], alignment: .leading, spacing: 8) {
-                    queueStatusPills(for: snapshot)
-                }
+    private var queueTelemetrySection: some View {
+        let snapshot = appState.queueDashboardSnapshot
+
+        return VStack(alignment: .leading, spacing: 10) {
+            WorkspaceSectionHeader(
+                eyebrow: nil,
+                title: "Queue",
+                message: queueManagerMessage(for: snapshot)
+            )
+
+            HStack(spacing: 8) {
+                metricTile(
+                    title: "Total",
+                    value: "\(snapshot.totalTrackedCount)",
+                    icon: "doc",
+                    color: .accentColor,
+                    identifier: "queue-total-count"
+                )
+                metricTile(
+                    title: "Running",
+                    value: "\(snapshot.runningCount)",
+                    icon: "arrow.triangle.2.circlepath",
+                    color: .orange,
+                    identifier: "queue-running-count"
+                )
+            }
+
+            HStack(spacing: 8) {
+                metricTile(
+                    title: "Done",
+                    value: "\(snapshot.terminalCount)",
+                    icon: "checkmark.circle",
+                    color: .green,
+                    identifier: "queue-finished-count"
+                )
+                metricTile(
+                    title: "Queued",
+                    value: "\(snapshot.queuedCount)",
+                    icon: "clock",
+                    color: .secondary,
+                    identifier: "queue-queued-count"
+                )
             }
 
             if snapshot.totalTrackedCount > 0 {
@@ -215,12 +255,143 @@ struct MainView: View {
                 )
                 .accessibilityIdentifier("queue-progress")
             }
-
-            schedulerControlSection(for: snapshot)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .workspaceSurface(tone: .muted, padding: 12)
+        .workspaceSurface(tone: .standard, padding: 12)
         .accessibilityIdentifier("queue-manager")
+    }
+
+    private var concurrencySection: some View {
+        let snapshot = appState.queueDashboardSnapshot
+
+        return VStack(alignment: .center, spacing: 12) {
+            HStack(spacing: 6) {
+                Text("Concurrency")
+                    .font(WorkspaceType.sectionTitle)
+                Image(systemName: "info.circle")
+                    .font(WorkspaceType.metric)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 12) {
+                if !isMergeMode {
+                    Button {
+                        appState.updateManualConcurrentJobLimit(appState.manualConcurrentJobLimit - 1)
+                    } label: {
+                        Image(systemName: "minus")
+                    }
+                    .buttonStyle(WorkspaceIconButtonStyle(tone: .muted))
+                    .disabled(
+                        appState.schedulerSettings.usesAutomaticConcurrency
+                            || appState.isConverting
+                            || appState.manualConcurrentJobLimit <= QueueSchedulerSettings.minimumConcurrentJobLimit
+                    )
+                }
+
+                Text("\(snapshot.effectiveConcurrentJobLimit)")
+                    .font(.system(size: 38, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .accessibilityIdentifier("queue-active-slots")
+
+                if !isMergeMode {
+                    Button {
+                        appState.updateManualConcurrentJobLimit(appState.manualConcurrentJobLimit + 1)
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .buttonStyle(WorkspaceIconButtonStyle(tone: .muted))
+                    .disabled(
+                        appState.schedulerSettings.usesAutomaticConcurrency
+                            || appState.isConverting
+                            || appState.manualConcurrentJobLimit >= QueueSchedulerSettings.maximumConcurrentJobLimit
+                    )
+                }
+            }
+
+            Text(isMergeMode ? "Ordered merge slot" : (snapshot.usesAutomaticConcurrency ? "Auto jobs" : "Manual jobs"))
+                .font(WorkspaceType.detail)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("queue-scheduler-mode")
+
+            if !isMergeMode {
+                Button {
+                    appState.setAutomaticSchedulingEnabled(!appState.schedulerSettings.usesAutomaticConcurrency)
+                } label: {
+                    Label("Auto", systemImage: snapshot.usesAutomaticConcurrency ? "checkmark.circle.fill" : "circle")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(
+                    WorkspaceCommandButtonStyle(
+                        tone: snapshot.usesAutomaticConcurrency ? .accent : .muted,
+                        isProminent: snapshot.usesAutomaticConcurrency
+                    )
+                )
+                .disabled(appState.isConverting)
+                .accessibilityIdentifier("queue-auto-scheduler")
+            }
+
+            Spacer(minLength: 0)
+        }
+        .workspaceSurface(tone: .standard, padding: 12)
+    }
+
+    private var launchProgressSection: some View {
+        let snapshot = appState.queueDashboardSnapshot
+        let total = max(snapshot.totalTrackedCount, 1)
+        let progress = Double(snapshot.terminalCount) / Double(total)
+
+        return VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                Text("Overall Progress")
+                    .font(WorkspaceType.bodyStrong)
+                Spacer(minLength: 0)
+                Text("\(Int((progress * 100).rounded()))%")
+                    .font(WorkspaceType.metric)
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            WorkspaceLinearProgress(
+                value: Double(snapshot.terminalCount),
+                total: Double(total),
+                color: .accentColor
+            )
+
+            HStack {
+                Text("\(snapshot.terminalCount) / \(snapshot.totalTrackedCount) files")
+                Spacer(minLength: 0)
+                Text(appState.isConverting ? "running" : "idle")
+            }
+            .font(WorkspaceType.metric)
+            .foregroundStyle(.secondary)
+        }
+        .workspaceInsetSurface(tone: .muted, padding: 10)
+    }
+
+    private func metricTile(
+        title: String,
+        value: String,
+        icon: String,
+        color: Color,
+        identifier: String
+    ) -> some View {
+        HStack(spacing: 9) {
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 22)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(WorkspaceType.sectionTitle)
+                    .monospacedDigit()
+                    .accessibilityIdentifier(identifier)
+                Text(title)
+                    .font(WorkspaceType.metric)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+        .workspaceInsetSurface(tone: .muted, padding: 9)
     }
 
     @ViewBuilder
@@ -439,6 +610,74 @@ struct MainView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func commandBar(using presentation: WorkspacePresentation) -> some View {
+        ZStack {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Color.red.opacity(0.92))
+                    .frame(width: 12, height: 12)
+                Circle()
+                    .fill(Color.yellow.opacity(0.92))
+                    .frame(width: 12, height: 12)
+                Circle()
+                    .fill(Color.green.opacity(0.92))
+                    .frame(width: 12, height: 12)
+
+                Text("AudioConverter")
+                    .font(WorkspaceType.display)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                StatusBannerView(
+                    title: presentation.banner.title,
+                    message: presentation.banner.message,
+                    tone: presentation.banner.tone
+                )
+                .frame(width: 330)
+
+                Button {
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+                .buttonStyle(WorkspaceIconButtonStyle(tone: .muted))
+                .disabled(true)
+            }
+
+            HStack(spacing: 0) {
+                modeButton(
+                    title: "Batch",
+                    mode: .batchConvert,
+                    identifier: "mode-batch"
+                )
+                .frame(width: 96)
+
+                modeButton(
+                    title: "Merge",
+                    mode: .mergeIntoOne,
+                    identifier: "mode-merge"
+                )
+                .frame(width: 96)
+            }
+            .padding(4)
+            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color.primary.opacity(0.09), lineWidth: 1)
+            )
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: WorkspaceChrome.surfaceRadius, style: .continuous)
+                .fill(Color.primary.opacity(0.035))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: WorkspaceChrome.surfaceRadius, style: .continuous)
+                .stroke(Color.primary.opacity(0.07), lineWidth: 1)
+        )
+    }
+
     private var operationModeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center, spacing: 8) {
@@ -454,23 +693,10 @@ struct MainView: View {
                 )
             }
 
-            HStack(spacing: 8) {
-                modeButton(
-                    title: "Batch",
-                    mode: .batchConvert,
-                    identifier: "mode-batch"
-                )
-                modeButton(
-                    title: "Merge",
-                    mode: .mergeIntoOne,
-                    identifier: "mode-merge"
-                )
-            }
-
-            Text(isMergeMode ? "One ordered export." : "Separate output per file.")
+            Text(isMergeMode ? "One ordered export with a single destination." : "Separate output per source file.")
                 .font(WorkspaceType.detail)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .lineLimit(2)
         }
         .workspaceSurface(tone: .standard, padding: 12)
     }
@@ -1102,7 +1328,7 @@ private struct WorkspacePresentation {
 }
 
 struct MainViewLayout: Equatable {
-    static let balancedGridBreakpoint: CGFloat = 860
+    static let studioBreakpoint: CGFloat = 860
 
     let windowWidth: CGFloat
     let availableWidth: CGFloat
@@ -1113,24 +1339,62 @@ struct MainViewLayout: Equatable {
     }
 
     var prefersTwoColumn: Bool {
-        prefersBalancedGrid
+        prefersStudioDeck
     }
 
     var prefersBalancedGrid: Bool {
-        availableWidth >= Self.balancedGridBreakpoint
+        prefersStudioDeck
+    }
+
+    var prefersStudioDeck: Bool {
+        availableWidth >= Self.studioBreakpoint
     }
 
     var balancedColumnWidths: (source: CGFloat, controls: CGFloat, export: CGFloat) {
-        let contentWidth = max(availableWidth - (WorkspaceChrome.pageSpacing * 2), 0)
-        let controls = min(max(contentWidth * 0.24, 220), 248)
-        let export = min(max(contentWidth * 0.24, 220), 248)
-        let source = max(contentWidth - controls - export, 360)
+        let widths = deckColumnWidths
+        return (widths.source, widths.controls, widths.launch)
+    }
 
-        return (source, controls, export)
+    var deckColumnWidths: (source: CGFloat, controls: CGFloat, launch: CGFloat) {
+        let contentWidth = max(availableWidth - (WorkspaceChrome.pageSpacing * 2), 0)
+        guard prefersStudioDeck else {
+            let controls = max(contentWidth * 0.30, 190)
+            let launch = max(contentWidth * 0.31, 200)
+            let source = max(contentWidth - controls - launch, 250)
+
+            return (source, controls, launch)
+        }
+
+        let controls = min(max(contentWidth * 0.29, 268), 302)
+        let launch = min(max(contentWidth * 0.31, 286), 322)
+        let source = max(contentWidth - controls - launch, 320)
+
+        return (source, controls, launch)
+    }
+
+    var operationsStripColumnWidths: (queue: CGFloat, concurrency: CGFloat, activity: CGFloat) {
+        let contentWidth = max(availableWidth - (WorkspaceChrome.pageSpacing * 2), 0)
+        guard prefersStudioDeck else {
+            let queue = max(contentWidth * 0.38, 250)
+            let concurrency = max(contentWidth * 0.21, 150)
+            let activity = max(contentWidth - queue - concurrency, 240)
+
+            return (queue, concurrency, activity)
+        }
+
+        let queue = min(max(contentWidth * 0.38, 300), 378)
+        let concurrency = min(max(contentWidth * 0.20, 178), 220)
+        let activity = max(contentWidth - queue - concurrency, 300)
+
+        return (queue, concurrency, activity)
     }
 
     func monitorRowHeight(for contentHeight: CGFloat) -> CGFloat {
-        min(max(contentHeight * 0.33, 204), 232)
+        operationsStripHeight(for: contentHeight)
+    }
+
+    func operationsStripHeight(for contentHeight: CGFloat) -> CGFloat {
+        min(max(contentHeight * 0.29, 188), 204)
     }
 
     var secondaryColumnWidth: CGFloat {
@@ -1139,18 +1403,33 @@ struct MainViewLayout: Equatable {
 }
 
 enum WorkspaceChrome {
-    static let pagePadding: CGFloat = 14
+    static let pagePadding: CGFloat = 12
     static let pageSpacing: CGFloat = 10
-    static let topBarHeight: CGFloat = 70
+    static let commandBarHeight: CGFloat = 62
+    static let topBarHeight: CGFloat = commandBarHeight
     static let surfacePadding: CGFloat = 12
     static let insetPadding: CGFloat = 9
     static let surfaceRadius: CGFloat = 8
     static let insetRadius: CGFloat = 6
+
+    static var windowBackground: some View {
+        ZStack {
+            Color(nsColor: .windowBackgroundColor)
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.84),
+                    Color(red: 0.05, green: 0.06, blue: 0.065).opacity(0.92)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
 }
 
 enum WorkspaceType {
-    static let display = Font.system(size: 24, weight: .semibold)
-    static let sectionTitle = Font.system(size: 15, weight: .semibold)
+    static let display = Font.system(size: 23, weight: .semibold)
+    static let sectionTitle = Font.system(size: 16, weight: .semibold)
     static let bodyStrong = Font.system(size: 13, weight: .semibold)
     static let body = Font.system(size: 13, weight: .regular)
     static let detail = Font.system(size: 12, weight: .regular)
@@ -1169,34 +1448,34 @@ enum WorkspaceSurfaceTone {
     var fillColor: Color {
         switch self {
         case .standard:
-            return Color.primary.opacity(0.035)
+            return Color.primary.opacity(0.055)
         case .accent:
-            return Color.accentColor.opacity(0.08)
+            return Color.accentColor.opacity(0.095)
         case .muted:
-            return Color.primary.opacity(0.020)
+            return Color.primary.opacity(0.035)
         case .warning:
-            return Color.orange.opacity(0.08)
+            return Color.orange.opacity(0.095)
         case .critical:
-            return Color.red.opacity(0.09)
+            return Color.red.opacity(0.10)
         case .success:
-            return Color.green.opacity(0.08)
+            return Color.green.opacity(0.09)
         }
     }
 
     var strokeColor: Color {
         switch self {
         case .standard:
-            return Color.primary.opacity(0.07)
+            return Color.primary.opacity(0.10)
         case .accent:
-            return Color.accentColor.opacity(0.20)
+            return Color.accentColor.opacity(0.26)
         case .muted:
-            return Color.primary.opacity(0.04)
+            return Color.primary.opacity(0.07)
         case .warning:
-            return Color.orange.opacity(0.18)
+            return Color.orange.opacity(0.22)
         case .critical:
-            return Color.red.opacity(0.20)
+            return Color.red.opacity(0.24)
         case .success:
-            return Color.green.opacity(0.20)
+            return Color.green.opacity(0.24)
         }
     }
 }

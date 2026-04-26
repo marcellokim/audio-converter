@@ -15,20 +15,28 @@ final class AudioConverterTests: XCTestCase {
     func testMainViewLayoutUsesTwoZoneWorkspaceAtDefaultWindowWidth() {
         let layout = MainViewLayout(windowWidth: 960)
         let columns = layout.balancedColumnWidths
+        let stripColumns = layout.operationsStripColumnWidths
 
-        XCTAssertEqual(layout.availableWidth, 932)
+        XCTAssertEqual(layout.availableWidth, 936)
         XCTAssertTrue(layout.prefersTwoColumn)
-        XCTAssertEqual(columns.source, 472)
-        XCTAssertEqual(columns.controls, 220)
-        XCTAssertEqual(columns.export, 220)
-        XCTAssertEqual(layout.monitorRowHeight(for: 640), 211.2, accuracy: 0.1)
+        XCTAssertEqual(columns.source, 362)
+        XCTAssertEqual(columns.controls, 268)
+        XCTAssertEqual(columns.export, 286)
+        XCTAssertEqual(stripColumns.queue, 348.08, accuracy: 0.1)
+        XCTAssertEqual(stripColumns.concurrency, 183.2, accuracy: 0.1)
+        XCTAssertEqual(stripColumns.activity, 384.72, accuracy: 0.1)
+        XCTAssertEqual(layout.monitorRowHeight(for: 640), 188, accuracy: 0.1)
     }
 
     func testMainViewLayoutCollapsesAtMinimumWindowWidth() {
         let layout = MainViewLayout(windowWidth: 720)
+        let columns = layout.deckColumnWidths
 
-        XCTAssertEqual(layout.availableWidth, 692)
+        XCTAssertEqual(layout.availableWidth, 696)
         XCTAssertFalse(layout.prefersTwoColumn)
+        XCTAssertEqual(columns.source, 263.64, accuracy: 0.1)
+        XCTAssertEqual(columns.controls, 202.8, accuracy: 0.1)
+        XCTAssertEqual(columns.launch, 209.56, accuracy: 0.1)
     }
 
     @MainActor

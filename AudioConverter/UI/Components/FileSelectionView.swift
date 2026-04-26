@@ -12,23 +12,19 @@ struct FileSelectionView: View {
     let canReorderFiles: Bool
     let isMergeMode: Bool
 
-    private let maxVisibleFiles = 3
+    private let maxVisibleFiles = 4
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             header
 
-            Text(selectionStatusMessage)
-                .font(WorkspaceType.detail)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
             if files.isEmpty {
-                Spacer(minLength: 0)
                 emptyState
                 Spacer(minLength: 0)
             } else {
                 stagedFileList
+                Spacer(minLength: 0)
+                bottomControls
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -40,48 +36,71 @@ struct FileSelectionView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(sectionTitle)
                     .font(WorkspaceType.sectionTitle)
-                Text(sectionMessage)
+                Text(selectionStatusMessage)
                     .font(WorkspaceType.body)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
+            .layoutPriority(1)
 
             Spacer()
 
             HStack(spacing: 8) {
-                if !files.isEmpty && canRemoveFiles {
-                    Button("Clear", action: onClearAll)
-                    .buttonStyle(WorkspaceCommandButtonStyle(tone: .muted, isProminent: false))
-                    .accessibilityIdentifier("clear-files")
+                if !files.isEmpty {
+                    Button("Add", action: action)
+                        .buttonStyle(WorkspaceCommandButtonStyle(tone: .accent, isProminent: true))
+                        .disabled(!canBrowseFiles)
+                        .accessibilityIdentifier("select-files")
                 }
 
-                Button("Select Files", action: action)
-                    .buttonStyle(WorkspaceCommandButtonStyle(tone: .accent, isProminent: true))
-                    .disabled(!canBrowseFiles)
-                    .accessibilityIdentifier("select-files")
+                Button {
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+                .buttonStyle(WorkspaceIconButtonStyle(tone: .muted))
+                .disabled(true)
             }
         }
     }
 
     private var emptyState: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Image(systemName: canBrowseFiles ? "plus.square.dashed" : "clock")
-                .font(.system(size: 18, weight: .semibold))
+        VStack(spacing: 12) {
+            Image(systemName: canBrowseFiles ? "doc.badge.plus" : "clock")
+                .font(.system(size: 36, weight: .semibold))
                 .foregroundStyle(canBrowseFiles ? Color.accentColor : .secondary)
-                .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(canBrowseFiles ? "Quick Start" : "Waiting for startup check")
+                Text(canBrowseFiles ? "Drop audio files here" : "Waiting for startup check")
                     .font(WorkspaceType.bodyStrong)
+                    .frame(maxWidth: .infinity, alignment: .center)
                 Text(emptyStateMessage)
                     .font(WorkspaceType.detail)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
             }
+
+            Button("Add Files...", action: action)
+                .buttonStyle(WorkspaceCommandButtonStyle(tone: .accent, isProminent: false))
+                .disabled(!canBrowseFiles)
+                .accessibilityIdentifier("select-files")
         }
-        .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
-        .workspaceInsetSurface(tone: canBrowseFiles ? .muted : .warning, padding: 10)
+        .frame(maxWidth: .infinity, minHeight: 184, alignment: .center)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.accentColor.opacity(canBrowseFiles ? 0.045 : 0.02))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(
+                    canBrowseFiles ? Color.accentColor.opacity(0.42) : Color.orange.opacity(0.26),
+                    style: StrokeStyle(lineWidth: 1, dash: [5, 4])
+                )
+        )
         .accessibilityIdentifier("quick-start-card")
     }
 
@@ -89,8 +108,11 @@ struct FileSelectionView: View {
         VStack(spacing: 8) {
             ForEach(Array(visibleFiles.enumerated()), id: \.element.id) { index, file in
                 HStack(spacing: 10) {
-                    Image(systemName: isMergeMode ? "arrow.up.arrow.down.circle" : "waveform")
-                        .foregroundStyle(Color.accentColor)
+                    Image(systemName: "music.note")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .frame(width: 30, height: 30)
+                        .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(file.displayName)
@@ -136,7 +158,7 @@ struct FileSelectionView: View {
                             Button(role: .destructive) {
                                 onRemove(file)
                             } label: {
-                                Label("Remove", systemImage: "xmark.circle.fill")
+                                Label("Remove", systemImage: "xmark")
                                     .labelStyle(.iconOnly)
                             }
                             .buttonStyle(WorkspaceIconButtonStyle(tone: .critical))
@@ -145,7 +167,7 @@ struct FileSelectionView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .workspaceInsetSurface(tone: .muted, padding: 8)
+                .workspaceInsetSurface(tone: .muted, padding: 7)
             }
 
             if hiddenFileCount > 0 {
@@ -155,6 +177,28 @@ struct FileSelectionView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
+            }
+        }
+    }
+
+    private var bottomControls: some View {
+        HStack(spacing: 8) {
+            if canRemoveFiles {
+                Button("Clear All", action: onClearAll)
+                    .buttonStyle(WorkspaceCommandButtonStyle(tone: .muted, isProminent: false))
+                    .accessibilityIdentifier("clear-files")
+            }
+
+            Spacer(minLength: 0)
+
+            if isMergeMode {
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(WorkspaceType.metric)
+                    .foregroundStyle(.secondary)
+            } else {
+                Image(systemName: "folder")
+                    .font(WorkspaceType.metric)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -172,7 +216,7 @@ struct FileSelectionView: View {
     }
 
     private var sectionTitle: String {
-        isMergeMode ? "Ordered source files" : "Source files"
+        isMergeMode ? "Source Deck" : "Source Deck"
     }
 
     private var sectionMessage: String {
@@ -188,8 +232,8 @@ struct FileSelectionView: View {
 
         if files.isEmpty {
             return isMergeMode
-                ? "Choose two or more source files, then set their final playback order."
-                : "Choose one or more source files to stage the next conversion batch."
+                ? "Add at least two files."
+                : "Add files to build the queue."
         }
 
         return isMergeMode
