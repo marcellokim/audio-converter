@@ -68,7 +68,7 @@ struct FormatInputView: View {
     }
 
     private var fieldGuidance: String {
-        isEnabled ? "Tap a chip to choose the output container." : "Format changes pause while work is running."
+        isEnabled ? "Tap a format chip." : "Format changes pause while work is running."
     }
 
     private var selectedFormatTitle: String {

@@ -31,7 +31,62 @@ struct MainView: View {
         }
     }
 
+    @ViewBuilder
     private func workspace(
+        for layout: MainViewLayout,
+        contentHeight: CGFloat,
+        presentation: WorkspacePresentation
+    ) -> some View {
+        if layout.prefersBalancedGrid {
+            balancedWorkspace(
+                for: layout,
+                contentHeight: contentHeight,
+                presentation: presentation
+            )
+        } else {
+            compactWorkspace(
+                for: layout,
+                contentHeight: contentHeight,
+                presentation: presentation
+            )
+        }
+    }
+
+    private func balancedWorkspace(
+        for layout: MainViewLayout,
+        contentHeight: CGFloat,
+        presentation: WorkspacePresentation
+    ) -> some View {
+        let columnWidths = layout.balancedColumnWidths
+        let monitorHeight = layout.monitorRowHeight(for: contentHeight)
+        let setupHeight = max(contentHeight - monitorHeight - WorkspaceChrome.pageSpacing, 0)
+
+        return VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
+            HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
+                fileSelectionSection
+                    .frame(width: columnWidths.source, height: setupHeight, alignment: .topLeading)
+
+                setupControlsColumn
+                    .frame(width: columnWidths.controls, height: setupHeight, alignment: .topLeading)
+
+                exportColumn(using: presentation.action)
+                    .frame(width: columnWidths.export, height: setupHeight, alignment: .topLeading)
+            }
+            .frame(height: setupHeight, alignment: .topLeading)
+
+            HStack(alignment: .top, spacing: WorkspaceChrome.pageSpacing) {
+                queueManagerSection
+                    .frame(width: columnWidths.source, height: monitorHeight, alignment: .topLeading)
+
+                batchStatusSection
+                    .frame(width: columnWidths.controls + columnWidths.export + WorkspaceChrome.pageSpacing, height: monitorHeight, alignment: .topLeading)
+            }
+            .frame(height: monitorHeight, alignment: .topLeading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func compactWorkspace(
         for layout: MainViewLayout,
         contentHeight: CGFloat,
         presentation: WorkspacePresentation
@@ -50,6 +105,41 @@ struct MainView: View {
                 .frame(width: secondaryWidth, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var setupControlsColumn: some View {
+        VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
+            operationModeSection
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            FormatInputView(
+                outputFormat: $appState.outputFormat,
+                formats: FormatRegistry.allFormats,
+                isEnabled: !appState.isConverting
+            )
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            if isMergeMode {
+                mergeDestinationSection
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func exportColumn(using action: WorkspacePresentation.Action) -> some View {
+        VStack(alignment: .leading, spacing: WorkspaceChrome.pageSpacing) {
+            primaryActionSection(using: action)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            exportReadinessCard(using: action)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func primaryLane(contentHeight: CGFloat) -> some View {
@@ -377,7 +467,7 @@ struct MainView: View {
                 )
             }
 
-            Text(isMergeMode ? "One ordered export from staged files." : "Separate outputs beside each source.")
+            Text(isMergeMode ? "One ordered export." : "Separate output per file.")
                 .font(WorkspaceType.detail)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -422,18 +512,21 @@ struct MainView: View {
         let guidance = action.guidance
 
         return VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center, spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(action.eyebrow.uppercased())
-                        .font(WorkspaceType.caption)
-                        .foregroundStyle(.secondary)
-                    Text(action.title)
-                        .font(WorkspaceType.sectionTitle)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(action.eyebrow.uppercased())
+                    .font(WorkspaceType.caption)
+                    .foregroundStyle(.secondary)
+                Text(action.title)
+                    .font(WorkspaceType.sectionTitle)
+                    .lineLimit(1)
+            }
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    actionButtons(using: action)
                 }
 
-                Spacer(minLength: 0)
-
-                HStack(spacing: 8) {
+                VStack(spacing: 8) {
                     actionButtons(using: action)
                 }
             }
@@ -446,6 +539,94 @@ struct MainView: View {
             )
         }
         .workspaceSurface(tone: .standard, padding: 12)
+    }
+
+    private func exportReadinessCard(using action: WorkspacePresentation.Action) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 8) {
+                Label("Ready checks", systemImage: "checklist")
+                    .font(WorkspaceType.bodyStrong)
+                    .foregroundStyle(.secondary)
+
+                Spacer(minLength: 0)
+
+                WorkspaceBadge(
+                    title: action.canStartPrimaryAction ? "Ready" : "Waiting",
+                    tone: action.canStartPrimaryAction ? .success : .muted
+                )
+            }
+
+            VStack(spacing: 7) {
+                ForEach(exportReadinessRows) { row in
+                    HStack(alignment: .center, spacing: 8) {
+                        Image(systemName: row.isReady ? "checkmark.circle.fill" : "circle")
+                            .font(WorkspaceType.metric)
+                            .foregroundStyle(row.isReady ? Color.green : .secondary)
+                            .frame(width: 14)
+
+                        Text(row.title)
+                            .font(WorkspaceType.metric)
+                            .foregroundStyle(.secondary)
+
+                        Spacer(minLength: 0)
+
+                        Text(row.value)
+                            .font(WorkspaceType.metric)
+                            .foregroundStyle(row.isReady ? .primary : .secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
+            }
+        }
+        .workspaceSurface(tone: action.canStartPrimaryAction ? .success : .muted, padding: 12)
+    }
+
+    private var exportReadinessRows: [ExportReadinessRow] {
+        var rows = [
+            ExportReadinessRow(
+                title: "Files",
+                value: appState.selectedAudioFiles.isEmpty ? "None" : "\(appState.selectedAudioFiles.count)",
+                isReady: isMergeMode ? appState.selectedAudioFiles.count >= 2 : !appState.selectedAudioFiles.isEmpty
+            ),
+            ExportReadinessRow(
+                title: "Format",
+                value: selectedFormatReadinessValue,
+                isReady: selectedFormatReadinessIsReady
+            )
+        ]
+
+        if isMergeMode {
+            rows.append(
+                ExportReadinessRow(
+                    title: "Destination",
+                    value: appState.mergeDestinationURL?.lastPathComponent ?? "None",
+                    isReady: appState.mergeDestinationURL != nil
+                )
+            )
+        }
+
+        return rows
+    }
+
+    private var selectedFormatReadinessValue: String {
+        switch appState.formatValidationState {
+        case .idle:
+            return "Missing"
+        case let .valid(format):
+            return format.outputExtension.uppercased()
+        case let .invalidFormat(rawInput):
+            let normalized = FormatRegistry.normalizedKey(for: rawInput)
+            return normalized.isEmpty ? "Missing" : normalized.uppercased()
+        }
+    }
+
+    private var selectedFormatReadinessIsReady: Bool {
+        if case .valid = appState.formatValidationState {
+            return true
+        }
+
+        return false
     }
 
     private func statusCallout(
@@ -470,20 +651,29 @@ struct MainView: View {
 
     @ViewBuilder
     private func actionButtons(using action: WorkspacePresentation.Action) -> some View {
-        Button(action.primaryButtonTitle, action: handleStartPrimaryAction)
+        Button(action: handleStartPrimaryAction) {
+            Text(action.primaryButtonTitle)
+                .frame(maxWidth: .infinity)
+        }
             .buttonStyle(WorkspaceCommandButtonStyle(tone: .accent, isProminent: true))
             .disabled(!action.canStartPrimaryAction)
             .accessibilityIdentifier(action.primaryButtonIdentifier)
 
         if action.showsCancelButton {
-            Button(action.cancelButtonTitle, action: handleCancelConversion)
+            Button(action: handleCancelConversion) {
+                Text(action.cancelButtonTitle)
+                    .frame(maxWidth: .infinity)
+            }
                 .buttonStyle(WorkspaceCommandButtonStyle(tone: .warning, isProminent: false))
                 .disabled(!action.canCancel)
                 .accessibilityIdentifier(action.cancelButtonIdentifier)
         }
 
         if action.showsRetryStartupButton {
-            Button("Retry Startup Check", action: handleRetryStartupChecks)
+            Button(action: handleRetryStartupChecks) {
+                Text("Retry Startup Check")
+                    .frame(maxWidth: .infinity)
+            }
                 .buttonStyle(WorkspaceCommandButtonStyle(tone: .warning, isProminent: false))
                 .accessibilityIdentifier("retry-startup-check")
         }
@@ -550,6 +740,16 @@ struct MainView: View {
 
     private func handleRetryStartupChecks() {
         appState.retryStartupChecks()
+    }
+}
+
+private struct ExportReadinessRow: Identifiable {
+    let title: String
+    let value: String
+    let isReady: Bool
+
+    var id: String {
+        title
     }
 }
 
@@ -871,7 +1071,7 @@ private struct WorkspacePresentation {
             if appState.selectedAudioFiles.isEmpty {
                 return isMergeMode
                     ? "Choose two or more source files to enable ordered merge."
-                    : "Choose one or more source files to enable conversion."
+                    : "Choose files to enable conversion."
             }
 
             guard let selectedFormat else {
@@ -884,7 +1084,7 @@ private struct WorkspacePresentation {
                 }
 
                 if appState.mergeDestinationURL == nil {
-                    return "Choose a destination before starting the merged \(selectedFormat.displayName) export."
+                    return "Choose a destination for the merged \(selectedFormat.displayName) file."
                 }
 
                 return "The ordered merge will export one \(selectedFormat.outputExtension.uppercased()) file."
@@ -902,7 +1102,7 @@ private struct WorkspacePresentation {
 }
 
 struct MainViewLayout: Equatable {
-    static let wideBreakpoint: CGFloat = 840
+    static let balancedGridBreakpoint: CGFloat = 860
 
     let windowWidth: CGFloat
     let availableWidth: CGFloat
@@ -913,27 +1113,44 @@ struct MainViewLayout: Equatable {
     }
 
     var prefersTwoColumn: Bool {
-        availableWidth >= Self.wideBreakpoint
+        prefersBalancedGrid
+    }
+
+    var prefersBalancedGrid: Bool {
+        availableWidth >= Self.balancedGridBreakpoint
+    }
+
+    var balancedColumnWidths: (source: CGFloat, controls: CGFloat, export: CGFloat) {
+        let contentWidth = max(availableWidth - (WorkspaceChrome.pageSpacing * 2), 0)
+        let controls = min(max(contentWidth * 0.24, 220), 248)
+        let export = min(max(contentWidth * 0.24, 220), 248)
+        let source = max(contentWidth - controls - export, 360)
+
+        return (source, controls, export)
+    }
+
+    func monitorRowHeight(for contentHeight: CGFloat) -> CGFloat {
+        min(max(contentHeight * 0.33, 204), 232)
     }
 
     var secondaryColumnWidth: CGFloat {
-        min(max(availableWidth * 0.34, 276), 336)
+        min(max(availableWidth * 0.35, 260), 318)
     }
 }
 
 enum WorkspaceChrome {
-    static let pagePadding: CGFloat = 16
-    static let pageSpacing: CGFloat = 12
-    static let topBarHeight: CGFloat = 78
-    static let surfacePadding: CGFloat = 14
-    static let insetPadding: CGFloat = 10
+    static let pagePadding: CGFloat = 14
+    static let pageSpacing: CGFloat = 10
+    static let topBarHeight: CGFloat = 70
+    static let surfacePadding: CGFloat = 12
+    static let insetPadding: CGFloat = 9
     static let surfaceRadius: CGFloat = 8
     static let insetRadius: CGFloat = 6
 }
 
 enum WorkspaceType {
-    static let display = Font.system(size: 25, weight: .semibold)
-    static let sectionTitle = Font.system(size: 16, weight: .semibold)
+    static let display = Font.system(size: 24, weight: .semibold)
+    static let sectionTitle = Font.system(size: 15, weight: .semibold)
     static let bodyStrong = Font.system(size: 13, weight: .semibold)
     static let body = Font.system(size: 13, weight: .regular)
     static let detail = Font.system(size: 12, weight: .regular)
